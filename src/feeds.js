@@ -8,6 +8,11 @@ export const DEFAULT_FEEDS = [
   { id: 'kitguru', name: 'KitGuru', url: 'https://www.kitguru.net/feed/' },
   { id: 'wccftech', name: 'Wccftech', url: 'https://wccftech.com/feed/' },
   { id: 'guru3d', name: 'Guru3D', url: 'https://www.guru3d.com/rss.xml' },
+  { id: 'anandtech', name: 'AnandTech', url: 'https://www.anandtech.com/rss/' },
+  { id: 'pcgamer', name: 'PC Gamer', url: 'https://www.pcgamer.com/rss/' },
+  { id: 'videocardz', name: 'VideoCardz', url: 'https://videocardz.com/feed' },
+  { id: 'hexus', name: 'HEXUS', url: 'https://www.hexus.net/rss/news.xml' },
+  { id: 'overclock3d', name: 'Overclock3D', url: 'https://www.overclock3d.net/rss' },
 ];
 
 export const FEEDS = DEFAULT_FEEDS;

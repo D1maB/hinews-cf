@@ -55,7 +55,7 @@ test('renders every stored item from the database', async () => {
 
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type'), /^text\/html/);
-  assert.match(html, /7 stored headlines from 5 RSS feeds/);
+  assert.match(html, /7 stored headlines from 10 RSS feeds/);
 
   for (const row of rows) {
     assert.ok(html.includes(row.title), `missing ${row.title}`);
@@ -104,7 +104,7 @@ test('seeds the database on the first request and reuses it afterwards', async (
   const fetchesAfterFirstRequest = assets.fetches();
 
   assert.equal(db.rows.size, FEEDS.length);
-  assert.match(first, /5 stored headlines/);
+  assert.match(first, /10 stored headlines/);
   assert.equal(fetchesAfterFirstRequest, FEEDS.length);
 
   await worker.fetch(REQUEST, env);
