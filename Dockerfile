@@ -13,4 +13,4 @@ COPY . .
 
 EXPOSE 8787
 
-CMD ["npm", "run", "dev"]
+CMD ["npx", "wrangler", "dev", "--ip", "0.0.0.0", "--port", "8787"]

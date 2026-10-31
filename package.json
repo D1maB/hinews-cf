@@ -5,7 +5,7 @@
   "description": "A minimal Cloudflare Worker that says Hello World",
   "type": "module",
   "scripts": {
-    "dev": "./scripts/compose up --build dev",
+    "dev": "./scripts/compose up --build app",
     "test": "./scripts/compose run --rm test",
     "deploy": "./scripts/compose run --rm deploy"
   },

@@ -18,7 +18,7 @@ the host.
 Build the image and start the worker:
 
 ```bash
-docker compose up --build dev
+docker compose up --build app
 ```
 
 Then open <http://localhost:8787>. The response body is `Hello World`, and the same
@@ -61,6 +61,6 @@ Set `CLOUDFLARE_ACCOUNT_ID` as well if your token has access to more than one ac
 ├── scripts/compose     # Picks `docker compose` or `docker-compose`
 ├── wrangler.toml       # Wrangler configuration
 ├── Dockerfile          # Alpine-based image with glibc for workerd
-├── docker-compose.yml  # Dev, test, and deploy services
+├── docker-compose.yml  # App, test, and deploy services
 └── AGENTS.md           # Conventions for agents and contributors
 ```

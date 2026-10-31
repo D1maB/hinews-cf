@@ -62,10 +62,12 @@ Write clean, readable JavaScript as an experienced developer would:
 
 All local infrastructure runs in Docker on Alpine:
 
-- The image is built from `node:20-alpine` (see `Dockerfile`).
+- The image is built from `frolvlad/alpine-glibc:alpine-3.21` (see `Dockerfile`),
+  because Wrangler's `workerd` runtime is glibc-linked and cannot run on musl-only
+  Alpine.
 - Services are defined in `docker-compose.yml`; keep it compatible with both the
   `docker compose` plugin and the legacy `docker-compose` CLI (Compose file 3.8).
-- The `dev` service serves the worker on port `8787`.
+- The `app` service serves the worker on port `8787`.
 - The `test` and `deploy` services run under their own profiles.
 - Add new infrastructure as compose services rather than host-level tooling.
 - Do not commit `node_modules`, `.wrangler`, or other local runtime artifacts.
@@ -80,6 +82,6 @@ All local infrastructure runs in Docker on Alpine:
 
 ## Local development
 
-- `docker compose up --build dev` — worker on port `8787`.
+- `docker compose up --build app` — worker on port `8787`.
 - `docker compose run --rm test` — run the test suite.
 - `docker compose run --rm deploy` — deploy using `CLOUDFLARE_API_TOKEN`.
