@@ -10,9 +10,9 @@ export const DEFAULT_FEEDS = [
   { id: 'guru3d', name: 'Guru3D', url: 'https://www.guru3d.com/rss.xml' },
   { id: 'anandtech', name: 'AnandTech', url: 'https://www.anandtech.com/rss/' },
   { id: 'pcgamer', name: 'PC Gamer', url: 'https://www.pcgamer.com/rss/' },
-  { id: 'videocardz', name: 'VideoCardz', url: 'https://videocardz.com/feed' },
-  { id: 'hexus', name: 'HEXUS', url: 'https://www.hexus.net/rss/news.xml' },
-  { id: 'overclock3d', name: 'Overclock3D', url: 'https://www.overclock3d.net/rss' },
+  { id: 'videocardz', name: 'VideoCardz', url: 'https://feeds.feedburner.com/VideoCardzcom' },
+  { id: 'hexus', name: 'HEXUS', url: 'http://www.hexus.net/rss/hexus_rss.xml' },
+  { id: 'overclock3d', name: 'Overclock3D', url: 'https://overclock3d.net/feed/' },
 ];
 
 export const FEEDS = DEFAULT_FEEDS;
