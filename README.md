@@ -81,20 +81,14 @@ development; it is only required for deployment.
 
 ## Feeds
 
-The feed list lives in `src/feeds.js`:
-
-| Feed           | URL                                       |
-| -------------- | ----------------------------------------- |
-| Tom's Hardware | `https://www.tomshardware.com/feeds/all`  |
-| TechPowerUp    | `https://www.techpowerup.com/rss/news`    |
-| KitGuru        | `https://www.kitguru.net/feed/`           |
-| Wccftech       | `https://wccftech.com/feed/`              |
-| Guru3D         | `https://www.guru3d.com/rss.xml`          |
+The feed list defaults to `src/feeds.js` and can be overridden by setting the
+`FEEDS` environment variable to a JSON array of `{ id, name, url }` objects
+(e.g. via Wrangler vars). Each run reads the latest ten items per feed and inserts
+only URLs that are not stored yet.
 
 In local development the worker reads `feeds/<id>.xml` from the mounted `feeds` volume
 through Wrangler's static assets binding. When deployed there is no assets binding, so
-the worker fetches the remote URLs above. Each run reads the latest five items per feed
-and inserts only URLs that are not stored yet.
+the worker fetches the remote URLs configured for each feed.
 
 ## Database
 

@@ -2,13 +2,42 @@ import { XMLParser } from 'fast-xml-parser';
 import { scoreTitle } from './score.js';
 import { dedupByTitle } from './dedup.js';
 
-export const FEEDS = [
+export const DEFAULT_FEEDS = [
   { id: 'tomshardware', name: "Tom's Hardware", url: 'https://www.tomshardware.com/feeds/all' },
   { id: 'techpowerup', name: 'TechPowerUp', url: 'https://www.techpowerup.com/rss/news' },
   { id: 'kitguru', name: 'KitGuru', url: 'https://www.kitguru.net/feed/' },
   { id: 'wccftech', name: 'Wccftech', url: 'https://wccftech.com/feed/' },
   { id: 'guru3d', name: 'Guru3D', url: 'https://www.guru3d.com/rss.xml' },
 ];
+
+export const FEEDS = DEFAULT_FEEDS;
+
+/**
+ * Resolves the configured feed list, allowing overrides through env.FEEDS.
+ *
+ * @param {Record<string, unknown>} [env]
+ * @returns {Array<{ id: string, name: string, url: string }>}
+ */
+export function getFeeds(env) {
+  const raw = env?.FEEDS;
+
+  if (Array.isArray(raw)) {
+    return raw;
+  }
+
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch {
+      // Fall back to the default feeds below.
+    }
+  }
+
+  return DEFAULT_FEEDS;
+}
 
 export const ITEMS_PER_FEED = 10;
 
@@ -50,13 +79,14 @@ const parser = new XMLParser({
  * @returns {Promise<Array<{ id: string, name: string, url: string, items: Array<{ title: string, link: string, publishedAt: string }>, error?: string }>>}
  */
 export async function loadFeeds(env) {
-  const results = await Promise.allSettled(FEEDS.map((feed) => loadFeed(feed, env)));
+  const feeds = getFeeds(env);
+  const results = await Promise.allSettled(feeds.map((feed) => loadFeed(feed, env)));
 
   return results.map((result, index) =>
     result.status === 'fulfilled'
       ? result.value
       : {
-          ...FEEDS[index],
+          ...feeds[index],
           items: [],
           error: result.reason instanceof Error ? result.reason.message : 'Unknown error',
         },

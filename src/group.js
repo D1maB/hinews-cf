@@ -1,4 +1,4 @@
-import { FEEDS } from './feeds.js';
+import { FEEDS, getFeeds } from './feeds.js';
 
 /**
  * Newest first; undated items go last.
@@ -29,8 +29,9 @@ export function compareByPublished(left, right) {
  * @param {Array<{ feed_id: string, title: string, url: string, published_at: string | null }>} items
  * @returns {Array<{ id: string, name: string, url: string, items: typeof items }>}
  */
-export function groupItems(items) {
-  const itemsByFeed = new Map(FEEDS.map((feed) => [feed.id, []]));
+export function groupItems(items, feeds) {
+  const feedList = feeds ?? getFeeds();
+  const itemsByFeed = new Map(feedList.map((feed) => [feed.id, []]));
 
   for (const item of items) {
     itemsByFeed.get(item.feed_id)?.push(item);
@@ -40,5 +41,5 @@ export function groupItems(items) {
     feedItems.sort(compareByPublished);
   }
 
-  return FEEDS.map((feed) => ({ ...feed, items: itemsByFeed.get(feed.id) ?? [] }));
+  return feedList.map((feed) => ({ ...feed, items: itemsByFeed.get(feed.id) ?? [] }));
 }
