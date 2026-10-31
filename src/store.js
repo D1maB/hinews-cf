@@ -1,5 +1,5 @@
 import { normalizeTitle } from './dedup.js';
-import { scoreTitle } from './score.js';
+import { scoreTitle, MIN_SCORE } from './score.js';
 
 const INSERT_ITEM = `
   INSERT OR IGNORE INTO items (feed_id, feed_name, title, url, published_at, score, status)
@@ -140,4 +140,6 @@ export async function backfillScores(db) {
   for (const row of results) {
     await db.prepare(UPDATE_SCORE).bind(scoreTitle(row.title), row.url).run();
   }
+
+  await db.prepare('DELETE FROM items WHERE score IS NOT NULL AND score <= ?').bind(MIN_SCORE).run();
 }

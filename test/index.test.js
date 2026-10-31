@@ -45,7 +45,7 @@ test('renders every stored item from the database', async () => {
   const rows = Array.from({ length: 7 }, (_, index) => ({
     feed_id: 'kitguru',
     feed_name: 'KitGuru',
-    title: `Stored story ${index + 1}`,
+    title: `Stored story ${index + 1} PC GPU benchmark`,
     url: `https://example.com/story-${index + 1}`,
     published_at: '2024-01-01T00:00:00.000Z',
   }));
