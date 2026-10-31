@@ -66,6 +66,18 @@ class FakeStatement {
     }
 
     if (this.sql.toLowerCase().includes('delete')) {
+      if (this.sql.toLowerCase().includes('id')) {
+        const [id] = this.args;
+        for (const [url, row] of [...this.database.rows.entries()]) {
+          if (row.id === id) {
+            this.database.rows.delete(url);
+            this.database.writes += 1;
+            return { meta: { changes: 1 } };
+          }
+        }
+        return { meta: { changes: 0 } };
+      }
+
       const threshold = this.args[0];
       for (const [url, row] of [...this.database.rows.entries()]) {
         if (row.score != null && row.score <= threshold) {
