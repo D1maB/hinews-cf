@@ -5,12 +5,14 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    command: npx wrangler dev --ip 0.0.0.0 --port 8787
+    command: npx wrangler dev --ip 0.0.0.0 --port 8787 --var FEED_BASE_URL:http://feeds
     ports:
       - "8787:8787"
     volumes:
       - .:/app
       - node_modules:/app/node_modules
+    depends_on:
+      - feeds
     stdin_open: true
     tty: true
     healthcheck:
@@ -19,6 +21,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+
+  feeds:
+    image: nginx:alpine
+    volumes:
+      - feeds:/usr/share/nginx/html:ro
 
   test:
     build:
@@ -47,5 +54,18 @@ services:
       CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
       CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
 
+  download-feeds:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: node scripts/download-feeds.mjs
+    profiles:
+      - download
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+      - feeds:/app/feeds
+
 volumes:
+  feeds:
   node_modules:

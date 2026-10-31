@@ -1,14 +1,14 @@
-const FEEDS = [
-  { name: "Tom's Hardware", url: 'https://www.tomshardware.com/feeds/all' },
-  { name: 'TechPowerUp', url: 'https://www.techpowerup.com/rss/news' },
-  { name: 'KitGuru', url: 'https://www.kitguru.net/feed/' },
-  { name: 'Wccftech', url: 'https://wccftech.com/feed/' },
-  { name: 'Guru3D', url: 'https://www.guru3d.com/rss.xml' },
+export const FEEDS = [
+  { id: 'tomshardware', name: "Tom's Hardware", url: 'https://www.tomshardware.com/feeds/all' },
+  { id: 'techpowerup', name: 'TechPowerUp', url: 'https://www.techpowerup.com/rss/news' },
+  { id: 'kitguru', name: 'KitGuru', url: 'https://www.kitguru.net/feed/' },
+  { id: 'wccftech', name: 'Wccftech', url: 'https://wccftech.com/feed/' },
+  { id: 'guru3d', name: 'Guru3D', url: 'https://www.guru3d.com/rss.xml' },
 ];
 
 const ITEMS_PER_FEED = 5;
 
-const FEED_REQUEST_INIT = {
+export const FEED_REQUEST_INIT = {
   headers: {
     accept: 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
     'user-agent': 'Mozilla/5.0 (compatible; hinews-cf/0.1)',
@@ -38,16 +38,28 @@ const HTML_ESCAPES = {
  * Fetches and parses one RSS feed.
  *
  * @param {{ name: string, url: string }} feed
+ * @param {string} url
  * @returns {Promise<{ name: string, url: string, items: Array<{ title: string, link: string, publishedAt: string }> }>}
  */
-async function loadFeed(feed) {
-  const response = await fetch(feed.url, FEED_REQUEST_INIT);
+async function loadFeed(feed, url) {
+  const response = await fetch(url, FEED_REQUEST_INIT);
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} ${response.statusText}`.trim());
   }
 
   return { ...feed, items: parseRssItems(await response.text()) };
+}
+
+/**
+ * Uses the local feed cache when FEED_BASE_URL is set, otherwise the remote feed.
+ *
+ * @param {{ id: string, url: string }} feed
+ * @param {string} baseUrl
+ * @returns {string}
+ */
+function feedUrl(feed, baseUrl) {
+  return baseUrl ? `${baseUrl.replace(/\/$/, '')}/${feed.id}.xml` : feed.url;
 }
 
 /**
@@ -217,8 +229,11 @@ function renderPage(feeds) {
 </html>`;
 }
 
-async function handleRequest() {
-  const results = await Promise.allSettled(FEEDS.map(loadFeed));
+async function handleRequest(_request, env = {}) {
+  const baseUrl = env.FEED_BASE_URL ?? '';
+  const results = await Promise.allSettled(
+    FEEDS.map((feed) => loadFeed(feed, feedUrl(feed, baseUrl))),
+  );
 
   const feeds = results.map((result, index) =>
     result.status === 'fulfilled'

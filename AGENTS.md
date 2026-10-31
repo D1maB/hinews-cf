@@ -75,6 +75,11 @@ All local infrastructure runs in Docker on Alpine:
 - Use the standalone `docker-compose` CLI for every command, run from the repository
   root.
 - The `app` service serves the worker on port `8787`.
+- The `feeds` service serves the downloaded XML from the `feeds` volume using
+  `nginx:alpine`.
+- The `download-feeds` service refreshes that volume; local development passes
+  `FEED_BASE_URL=http://feeds` to the worker.
+- Deployment does not set `FEED_BASE_URL`, so production fetches the remote feeds.
 - The `test` and `deploy` services run under their own profiles.
 - Add new infrastructure as compose services rather than host-level tooling.
 - Do not commit `node_modules`, `.wrangler`, `.env`, or other local runtime artifacts.
@@ -95,6 +100,8 @@ All local infrastructure runs in Docker on Alpine:
 
 ## Local development
 
+- `docker-compose run --rm download-feeds` — download the RSS feeds into the local
+  `feeds` volume. Run this before starting the app and again to refresh the cache.
 - `docker-compose up -d --build app` — build and start the worker in the background on
   port `8787`.
 - `docker-compose logs -f app` — follow the worker logs.

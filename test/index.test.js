@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import worker from '../src/index.js';
+import worker, { FEEDS } from '../src/index.js';
 
 const REQUEST = new Request('https://example.com/');
+const LOCAL_ENV = { FEED_BASE_URL: 'http://feeds' };
 
 const RSS = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
@@ -17,10 +18,13 @@ const RSS = `<?xml version="1.0" encoding="UTF-8"?>
   </channel>
 </rss>`;
 
-test('renders news from every feed', async (t) => {
-  const fetchMock = t.mock.method(globalThis, 'fetch', async () => new Response(RSS));
+test('renders news from every local feed', async (t) => {
+  const fetchMock = t.mock.method(globalThis, 'fetch', async (url) => {
+    assert.match(url, /^http:\/\/feeds\/[a-z0-9]+\.xml$/);
+    return new Response(RSS);
+  });
 
-  const response = await worker.fetch(REQUEST);
+  const response = await worker.fetch(REQUEST, LOCAL_ENV);
   const html = await response.text();
 
   assert.equal(response.status, 200);
@@ -32,6 +36,18 @@ test('renders news from every feed', async (t) => {
   assert.match(html, /https:\/\/example\.com\/rtx-5090\?a=1&amp;b=2/);
 });
 
+test('fetches remote feeds when no local base URL is configured', async (t) => {
+  const requestedUrls = [];
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    requestedUrls.push(url);
+    return new Response(RSS);
+  });
+
+  await worker.fetch(REQUEST, {});
+
+  assert.deepEqual(requestedUrls.sort(), FEEDS.map((feed) => feed.url).sort());
+});
+
 test('keeps rendering when a feed fails', async (t) => {
   t.mock.method(globalThis, 'fetch', async (url) =>
     url.includes('techpowerup')
@@ -39,7 +55,7 @@ test('keeps rendering when a feed fails', async (t) => {
       : new Response(RSS),
   );
 
-  const html = await (await worker.fetch(REQUEST)).text();
+  const html = await (await worker.fetch(REQUEST, LOCAL_ENV)).text();
 
   assert.match(html, /TechPowerUp/);
   assert.match(html, /HTTP 503 Service Unavailable/);

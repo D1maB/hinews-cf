@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "docker-compose up -d --build app",
+    "feeds": "docker-compose run --rm download-feeds",
     "test": "docker-compose run --rm test",
     "deploy": "docker-compose run --rm deploy"
   },
