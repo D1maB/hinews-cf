@@ -48,8 +48,10 @@ Write clean, readable JavaScript as an experienced developer would:
 - Add JSDoc to exported functions and non-obvious helpers.
 - Avoid dead code, unused parameters, and commented-out code.
 - Keep the code self-explanatory; comment only the "why", not the "what".
-- Keep the worker stateless and platform-native (Web APIs such as `Request`, `Response`, `fetch`).
-- Do not add dependencies unless they clearly pay for themselves.
+- Keep the worker stateless and platform-native (Web APIs such as `Request`, `Response`,
+  `fetch`).
+- Do not add dependencies unless they clearly pay for themselves. `fast-xml-parser` is
+  the supported RSS/Atom parser; do not reintroduce hand-written XML parsing.
 
 ## Testing
 
@@ -57,7 +59,17 @@ Write clean, readable JavaScript as an experienced developer would:
 - Run `docker-compose run --rm test` before committing; all tests must pass.
 - Tests use the built-in `node:test` runner inside the container and live in `test/`.
 - Mock remote feeds in tests; never depend on the network.
+- Use the in-memory D1 stand-in (`test/fake-db.js`) instead of a real database.
 - Test behavior and observable output, not implementation details.
+
+## Database
+
+- The schema lives in `migrations/`; add a new numbered migration for every change.
+- Never edit a migration that has already been applied.
+- `items.url` is unique and writes use `INSERT OR IGNORE`; keep deduplication enforced by
+  the database rather than application-side checks.
+- Keep SQL in `src/store.js`; parsing belongs in `src/feeds.js` and orchestration in
+  `src/ingest.js`.
 
 ## Infrastructure
 
@@ -74,12 +86,16 @@ All local infrastructure runs in Docker on Alpine:
 - Keep `docker-compose.yml` compatible with `docker-compose` v1 (Compose file 3.8).
 - Use the standalone `docker-compose` CLI for every command, run from the repository
   root.
-- The `app` service serves the worker on port `8787` and mounts the `feeds` volume
-  read-only.
+- The `app` service serves the worker on port `8787`, mounts the `feeds` volume
+  read-only, applies local D1 migrations, and enables `--test-scheduled`.
 - Local development uses `wrangler.dev.toml`, whose `[assets]` section exposes the
-  downloaded XML to the worker through `env.ASSETS`.
+  downloaded XML to the worker through `env.ASSETS`, and whose D1 binding points at the
+  local database.
 - The `download-feeds` service refreshes the `feeds` volume.
-- Deployment has no assets binding, so production fetches the remote feeds.
+- Deployment applies remote D1 migrations before `wrangler deploy`; it has no assets
+  binding, so production fetches the remote feeds.
+- The production cron trigger (`0 */12 * * *`) runs the ingestion handler every 12
+  hours. Local testing uses `/__scheduled`.
 - The `test` and `deploy` services run under their own profiles.
 - Add new infrastructure as compose services rather than host-level tooling.
 - Do not commit `node_modules`, `.wrangler`, `.env`, or other local runtime artifacts.
@@ -103,8 +119,10 @@ All local infrastructure runs in Docker on Alpine:
 - `docker-compose run --rm download-feeds` — download the RSS feeds into the local
   `feeds` volume. Run this before starting the app and again to refresh the cache.
 - `docker-compose up -d --build app` — build and start the worker in the background on
-  port `8787`.
+  port `8787`; local D1 migrations are applied automatically.
 - `docker-compose logs -f app` — follow the worker logs.
+- `curl "http://localhost:8787/__scheduled?cron=0+*/12+*+*+*"` — run the cron ingestion
+  handler locally.
 - `docker-compose down` — stop and remove the containers.
 - `docker-compose run --rm test` — run the test suite.
 - `docker-compose run --rm deploy` — deploy using `CLOUDFLARE_API_TOKEN`.

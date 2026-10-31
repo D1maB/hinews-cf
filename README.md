@@ -1,10 +1,11 @@
 # hinews-cf
 
 A minimal [Cloudflare Worker](https://developers.cloudflare.com/workers/) that fetches
-five PC hardware RSS feeds, parses their XML, and renders the latest headlines.
+five PC hardware RSS feeds, parses them, stores new headlines in a D1 database, and
+renders every stored item.
 
 Local development reads feeds downloaded into local storage; production fetches them
-from the remote sites.
+from the remote sites. A cron trigger refreshes the database every 12 hours.
 
 Everything — development, tests, and deployment — runs in Docker on Alpine. Docker is
 the only supported runtime; no Node.js, Wrangler, or test runner is installed or run on
@@ -50,8 +51,11 @@ The app runs entirely in Docker, so you do not need Node.js installed on the hos
    docker-compose up -d --build app
    ```
 
-3. Open <http://localhost:8787>. The page lists the latest headlines from the five
-   downloaded feeds.
+   Startup applies the D1 migrations to the local database and then seeds it on the
+   first request, so the page is populated immediately.
+
+3. Open <http://localhost:8787>. The page lists every stored headline from the five
+   feeds.
 
 4. Follow the worker logs when needed:
 
@@ -59,7 +63,13 @@ The app runs entirely in Docker, so you do not need Node.js installed on the hos
    docker-compose logs -f app
    ```
 
-5. Stop and remove the containers:
+5. Trigger the cron handler manually (local development only):
+
+   ```bash
+   curl "http://localhost:8787/__scheduled?cron=0+*/12+*+*+*"
+   ```
+
+6. Stop and remove the containers:
 
    ```bash
    docker-compose down
@@ -71,7 +81,7 @@ development; it is only required for deployment.
 
 ## Feeds
 
-The feed list lives in `src/index.js`:
+The feed list lives in `src/feeds.js`:
 
 | Feed           | URL                                       |
 | -------------- | ----------------------------------------- |
@@ -83,9 +93,20 @@ The feed list lives in `src/index.js`:
 
 In local development the worker reads `feeds/<id>.xml` from the mounted `feeds` volume
 through Wrangler's static assets binding. When deployed there is no assets binding, so
-the worker fetches the remote URLs above. Each feed is loaded concurrently and the
-latest five items are rendered. If a feed is missing or unreachable, its section shows
-an error while the other feeds still render.
+the worker fetches the remote URLs above. Each run reads the latest five items per feed
+and inserts only URLs that are not stored yet.
+
+## Database
+
+Parsed items are stored in D1 (`items` table, defined in `migrations/`). The `url` column
+is unique, so the same story is never inserted twice even though feeds are polled
+repeatedly. The page reads all rows from the database, newest first, grouped by feed.
+
+A cron trigger (`0 */12 * * *`) runs the parser every 12 hours in production. Locally,
+`wrangler dev --test-scheduled` exposes the same handler at `/__scheduled`.
+
+Local migrations are applied automatically when the `app` service starts. Applied data
+lives in `.wrangler/` and persists until you remove it.
 
 ## Tests
 
@@ -95,34 +116,54 @@ Run the test suite in a one-off container:
 docker-compose run --rm test
 ```
 
-The tests replace the network with mocked RSS responses and assert local and remote feed
-resolution, entity decoding, and graceful handling of a failing feed.
+The tests use mocked feeds and an in-memory D1 stand-in. They cover parsing, storage,
+URL deduplication, scheduled ingestion, full database rendering, and failing feeds.
 
 ## Deployment
 
-Create an API token with the **Edit Cloudflare Workers** template, put it in `.env`, then
-deploy:
+1. Create the D1 database (once):
 
-```bash
-docker-compose run --rm deploy
-```
+   ```bash
+   docker-compose run --rm --entrypoint npx app wrangler d1 create hinews-cf
+   ```
+
+   Copy the returned `database_id` into `wrangler.toml`, replacing
+   `REPLACE_WITH_YOUR_D1_DATABASE_ID`.
+
+2. Create an API token with the **Edit Cloudflare Workers** template and put it in
+   `.env`.
+
+3. Apply migrations and deploy:
+
+   ```bash
+   docker-compose run --rm deploy
+   ```
+
+   The deploy service applies remote migrations before running `wrangler deploy`.
 
 The deployed worker has no static assets binding, so it fetches the feeds directly from
-the remote sites.
+the remote sites, and the cron trigger refreshes the database every 12 hours.
+
+To prefill the production database without waiting for the cron, run the deployed cron
+handler manually from the Cloudflare dashboard.
 
 ## Project structure
 
 ```
 .
 ├── docker/
-│   └── Dockerfile              # Alpine-based image with glibc for workerd
+│   └── Dockerfile              # Alpine image with glibc for workerd
+├── migrations/                 # D1 schema migrations
 ├── scripts/download-feeds.mjs  # Downloads RSS XML into the feeds volume
-├── src/index.js                # Worker entry point and feed list
-├── test/index.test.js          # Unit tests
+├── src/feeds.js                # Feed list and RSS parsing service
+├── src/ingest.js               # Parses feeds and stores new items
+├── src/store.js                # D1 reads and deduplicating writes
+├── src/index.js                # HTTP and scheduled entry points
+├── test/                       # Unit tests and in-memory D1 helper
 ├── .dockerignore               # Build context exclusions (must stay at the context root)
 ├── .env.example                # Template for local secrets
 ├── docker-compose.yml          # App, test, deploy, and download services
-├── wrangler.toml               # Production configuration (remote feeds)
-├── wrangler.dev.toml           # Local configuration (assets binding for feeds)
+├── wrangler.toml               # Production configuration (D1, cron, remote feeds)
+├── wrangler.dev.toml           # Local configuration (assets binding and local D1)
 └── AGENTS.md                   # Conventions for agents and contributors
 ```

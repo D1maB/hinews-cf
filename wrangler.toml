@@ -1,3 +1,14 @@
 name = "hinews-cf"
 main = "src/index.js"
 compatibility_date = "2025-01-01"
+
+# Refresh stored headlines twice a day.
+[triggers]
+crons = ["0 */12 * * *"]
+
+# Create the database with `wrangler d1 create hinews-cf` and replace the id.
+[[d1_databases]]
+binding = "DB"
+database_name = "hinews-cf"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+migrations_dir = "migrations"
