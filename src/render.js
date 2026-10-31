@@ -127,7 +127,7 @@ export function renderPage(feeds, total, lastSync = null) {
     h1 { margin: 0 0 0.25rem; font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
     .subtitle { margin: 0; color: var(--muted); font-size: 0.95rem; }
     .sync { margin: 0.5rem 0 0; color: var(--muted); font-size: 0.8rem; }
-    .feeds { display: flex; flex-direction: column; gap: 1.5rem; }
+    .feeds { display: grid; gap: 1.5rem; grid-template-columns: repeat(2, 1fr); }
     .feed {
       background: var(--card);
       border: 1px solid var(--border);
@@ -138,13 +138,12 @@ export function renderPage(feeds, total, lastSync = null) {
     .feed h2 { margin: 0 0 0.75rem; font-size: 1.1rem; font-weight: 600; }
     .feed h2 a { color: var(--accent); text-decoration: none; }
     .feed h2 a:hover { text-decoration: underline; }
-    ul { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 1rem; }
+    ul { list-style: none; padding: 0; margin: 0; }
     li {
-      break-inside: avoid;
-      margin-bottom: 0.75rem;
       padding: 0.6rem 0.75rem;
       border: 1px solid var(--border);
       border-radius: 0.5rem;
+      margin-bottom: 0.75rem;
     }
     li a { color: var(--text); text-decoration: none; font-weight: 500; }
     li a:hover { color: var(--accent); }
