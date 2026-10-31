@@ -50,10 +50,13 @@ export function formatDate(value) {
  */
 export function renderItem(item) {
   const published = formatDate(item.published_at);
-  const time = published ? `<time>${escapeHtml(published)}</time>` : '';
   const score = item.score != null ? `<span class="score">${escapeHtml(String(item.score))}</span>` : '';
+  const time = published ? `<time>${escapeHtml(published)}</time>` : '';
 
-  return `<li><a href="${escapeHtml(safeUrl(item.url))}">${escapeHtml(item.title)}</a>${score}${time}</li>`;
+  return `<li>
+  <a href="${escapeHtml(safeUrl(item.url))}">${escapeHtml(item.title)}</a>
+  <div class="meta">${score}${time}</div>
+</li>`;
 }
 
 /**
@@ -85,34 +88,87 @@ export function renderPage(feeds, total, lastSync = null) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>News</title>
   <style>
-    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
-    body { margin: 0 auto; max-width: 60rem; padding: 2rem 1rem; line-height: 1.5; }
-    h1 { margin-bottom: 0.25rem; }
-    .subtitle { color: #666; margin-top: 0; }
-    .feeds { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); }
-    .feed { border: 1px solid #ddd; border-radius: 0.5rem; padding: 1rem 1.25rem; }
-    .feed h2 { font-size: 1.1rem; margin-top: 0; }
-    ul { padding-left: 1.1rem; }
-    li { margin-bottom: 0.6rem; }
-    time { display: block; color: #666; font-size: 0.85rem; }
-    .score { display: inline-block; margin-left: 0.5rem; padding: 0 0.4rem; border-radius: 0.25rem; background: #eee; font-size: 0.8rem; }
-    .empty { color: #666; }
-    @media (prefers-color-scheme: dark) {
-      .feed { border-color: #444; }
-      .subtitle, time, .empty { color: #aaa; }
-      .score { background: #333; }
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+      --score-bg: #e0e7ff;
+      --score-text: #1e3a8a;
     }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --card: #1e293b;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --border: #334155;
+        --accent: #60a5fa;
+        --score-bg: #1e3a8a;
+        --score-text: #bfdbfe;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5;
+    }
+    .container { max-width: 72rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+    header { margin-bottom: 2rem; }
+    h1 { margin: 0 0 0.25rem; font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
+    .subtitle { margin: 0; color: var(--muted); font-size: 0.95rem; }
+    .sync { margin: 0.5rem 0 0; color: var(--muted); font-size: 0.8rem; }
+    .feeds { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); }
+    .feed {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.25rem 1.5rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .feed h2 { margin: 0 0 0.75rem; font-size: 1.1rem; font-weight: 600; }
+    .feed h2 a { color: var(--accent); text-decoration: none; }
+    .feed h2 a:hover { text-decoration: underline; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li {
+      padding: 0.6rem 0;
+      border-top: 1px solid var(--border);
+    }
+    li:first-child { border-top: none; padding-top: 0; }
+    li a { color: var(--text); text-decoration: none; font-weight: 500; }
+    li a:hover { color: var(--accent); }
+    .meta { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; }
+    .score {
+      display: inline-block;
+      padding: 0.1rem 0.5rem;
+      border-radius: 999px;
+      background: var(--score-bg);
+      color: var(--score-text);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    time { color: var(--muted); font-size: 0.8rem; }
+    .empty { color: var(--muted); font-style: italic; margin: 0; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>News</h1>
-    <p class="subtitle">${total} stored headline${total === 1 ? '' : 's'} from ${feeds.length} RSS feeds.</p>
-    <p class="sync">Last sync: ${escapeHtml(lastSync ?? 'never')}</p>
-  </header>
-  <main class="feeds">
-    ${feeds.map(renderFeed).join('\n    ')}
-  </main>
+  <div class="container">
+    <header>
+      <h1>News</h1>
+      <p class="subtitle">${total} stored headline${total === 1 ? '' : 's'} from ${feeds.length} RSS feeds.</p>
+      <p class="sync">Last sync: ${escapeHtml(lastSync ?? 'never')}</p>
+    </header>
+    <main class="feeds">
+      ${feeds.map(renderFeed).join('\n    ')}
+    </main>
+  </div>
 </body>
 </html>`;
 }
