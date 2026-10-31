@@ -139,13 +139,13 @@ export function renderPage(feeds, total, lastSync = null) {
     .feed h2 a { color: var(--accent); text-decoration: none; }
     .feed h2 a:hover { text-decoration: underline; }
     ul { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 1rem; }
-    li { break-inside: avoid; margin-bottom: 0.75rem; }
     li {
+      break-inside: avoid;
+      margin-bottom: 0.75rem;
       padding: 0.6rem 0.75rem;
       border: 1px solid var(--border);
       border-radius: 0.5rem;
     }
-    li:first-child { border-top: none; padding-top: 0; }
     li a { color: var(--text); text-decoration: none; font-weight: 500; }
     li a:hover { color: var(--accent); }
     .meta { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; }
