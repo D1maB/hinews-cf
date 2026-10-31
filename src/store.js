@@ -141,5 +141,5 @@ export async function backfillScores(db) {
     await db.prepare(UPDATE_SCORE).bind(scoreTitle(row.title), row.url).run();
   }
 
-  await db.prepare('DELETE FROM items WHERE score IS NOT NULL AND score < ?').bind(MIN_SCORE).run();
+  await db.prepare('DELETE FROM items WHERE score IS NOT NULL AND score <= ?').bind(MIN_SCORE).run();
 }
