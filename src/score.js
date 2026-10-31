@@ -45,7 +45,7 @@ const NEGATIVE_KEYWORDS = [
 ];
 
 /**
- * Scores a headline for PC-user relevance on a 0-100 scale.
+ * Scores a headline for user relevance on a 0-100 scale.
  *
  * @param {string} title
  * @returns {number}

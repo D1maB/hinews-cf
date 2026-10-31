@@ -2,7 +2,7 @@
   "name": "hinews-cf",
   "version": "0.1.0",
   "private": true,
-  "description": "A Cloudflare Worker that stores PC hardware RSS headlines in D1",
+  "description": "A Cloudflare Worker that stores RSS headlines in D1",
   "type": "module",
   "scripts": {
     "dev": "docker-compose up -d --build app",

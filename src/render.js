@@ -84,7 +84,7 @@ export function renderPage(feeds, total, lastSync = null) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PC parts news</title>
+  <title>News</title>
   <style>
     :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
     body { margin: 0 auto; max-width: 60rem; padding: 2rem 1rem; line-height: 1.5; }
@@ -107,7 +107,7 @@ export function renderPage(feeds, total, lastSync = null) {
 </head>
 <body>
   <header>
-    <h1>PC parts news</h1>
+    <h1>News</h1>
     <p class="subtitle">${total} stored headline${total === 1 ? '' : 's'} from ${feeds.length} RSS feeds.</p>
     <p class="sync">Last sync: ${escapeHtml(lastSync ?? 'never')}</p>
   </header>

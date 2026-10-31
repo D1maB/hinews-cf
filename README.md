@@ -1,7 +1,7 @@
 # hinews-cf
 
 A minimal [Cloudflare Worker](https://developers.cloudflare.com/workers/) that fetches
-five PC hardware RSS feeds, parses them, stores new headlines in a D1 database, and
+RSS feeds, parses them, stores new headlines in a D1 database, and
 renders every stored item.
 
 Local development reads feeds downloaded into local storage; production fetches them
