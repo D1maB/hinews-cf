@@ -1,7 +1,17 @@
 #!/bin/sh
-# Runs the Compose CLI available on this machine: the `docker compose` plugin
-# on modern Docker installs, or the legacy `docker-compose` binary.
+# Runs the Compose CLI available on this machine — the `docker compose` plugin
+# on modern Docker installs, or the legacy `docker-compose` binary — against
+# docker/compose.yml, loading secrets from the repository-root .env file.
 set -eu
+
+PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+COMPOSE_FILE="$PROJECT_DIR/docker/compose.yml"
+ENV_FILE="$PROJECT_DIR/.env"
+
+set -- -f "$COMPOSE_FILE" "$@"
+if [ -f "$ENV_FILE" ]; then
+  set -- --env-file "$ENV_FILE" "$@"
+fi
 
 if docker compose version >/dev/null 2>&1; then
   exec docker compose "$@"

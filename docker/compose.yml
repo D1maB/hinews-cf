@@ -2,12 +2,14 @@ version: "3.8"
 
 services:
   app:
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     command: npx wrangler dev --ip 0.0.0.0 --port 8787
     ports:
       - "8787:8787"
     volumes:
-      - .:/app
+      - ..:/app
       - node_modules:/app/node_modules
     stdin_open: true
     tty: true
@@ -19,23 +21,27 @@ services:
       start_period: 20s
 
   test:
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     command: node --test
     profiles:
       - test
     volumes:
-      - .:/app
+      - ..:/app
       - node_modules:/app/node_modules
     environment:
       CI: "true"
 
   deploy:
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     command: npx wrangler deploy
     profiles:
       - deploy
     volumes:
-      - .:/app
+      - ..:/app
       - node_modules:/app/node_modules
     environment:
       CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
