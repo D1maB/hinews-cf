@@ -88,6 +88,16 @@ class FakeStatement {
       return { meta: { changes: 1 } };
     }
 
+    if (this.sql.toLowerCase().includes('update') && this.sql.toLowerCase().includes('scheduled_at')) {
+      const [scheduledAt, url] = this.args;
+      const row = this.database.rows.get(url);
+      if (row) {
+        row.scheduled_at = scheduledAt;
+        this.database.writes += 1;
+      }
+      return { meta: { changes: row ? 1 : 0 } };
+    }
+
     if (this.sql.toLowerCase().includes('update') && this.sql.toLowerCase().includes('status')) {
       for (const row of this.database.rows.values()) {
         if (row.status == null || row.status === 'new') {

@@ -164,4 +164,17 @@ export async function backfillScores(db) {
   await db.prepare('DELETE FROM items WHERE score IS NOT NULL AND score <= ?').bind(MIN_SCORE).run();
 
   await db.prepare("UPDATE items SET status = 'scheduled' WHERE status IS NULL OR status = 'new'").run();
+
+  const { results: allRows = [] } = await db.prepare('SELECT url, scheduled_at FROM items').all();
+  const unscheduled = allRows.filter((row) => !row.scheduled_at);
+  let last = await getLastScheduledAt(db);
+  for (const row of unscheduled) {
+    const baseTime = last ? new Date(last).getTime() : Date.now();
+    const randomMinutes = 10 + Math.floor(Math.random() * 16);
+    const intervalMinutes = 20 + randomMinutes;
+    const next = new Date(baseTime + intervalMinutes * 60 * 1000);
+    const scheduledAt = next.toISOString();
+    await db.prepare("UPDATE items SET scheduled_at = ? WHERE url = ?").bind(scheduledAt, row.url).run();
+    last = scheduledAt;
+  }
 }
