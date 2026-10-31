@@ -54,10 +54,11 @@ export function renderItem(item) {
   const scoreClass = scoreValue == null ? '' : scoreValue >= 80 ? ' high' : scoreValue >= 60 ? ' mid' : '';
   const score = scoreValue != null ? `<span class="score${scoreClass}">${escapeHtml(String(scoreValue))}</span>` : '';
   const time = published ? `<time>${escapeHtml(published)}</time>` : '';
+  const scheduled = item.scheduled_at ? `<time class="scheduled">Scheduled: ${escapeHtml(item.scheduled_at)}</time>` : '';
 
   return `<li>
   <a href="${escapeHtml(safeUrl(item.url))}">${escapeHtml(item.title)}</a>
-  <div class="meta">${score}${time}</div>
+  <div class="meta">${score}${time}${scheduled}</div>
 </li>`;
 }
 

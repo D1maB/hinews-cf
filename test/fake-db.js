@@ -88,6 +88,16 @@ class FakeStatement {
       return { meta: { changes: 1 } };
     }
 
+    if (this.sql.toLowerCase().includes('update') && this.sql.toLowerCase().includes('status')) {
+      for (const row of this.database.rows.values()) {
+        if (row.status == null || row.status === 'new') {
+          row.status = 'scheduled';
+        }
+      }
+      this.database.writes += 1;
+      return { meta: { changes: 1 } };
+    }
+
     if (this.sql.toLowerCase().includes('update')) {
       const [score, url] = this.args;
       const row = this.database.rows.get(url);
@@ -102,7 +112,7 @@ class FakeStatement {
       throw new Error(`Unexpected SQL: ${this.sql}`);
     }
 
-    const [feedId, feedName, title, url, publishedAt, score] = this.args;
+    const [feedId, feedName, title, url, publishedAt, score, scheduledAt] = this.args;
 
     if (this.database.rows.has(url)) {
       return { meta: { changes: 0 } };
@@ -123,7 +133,8 @@ class FakeStatement {
       url,
       published_at: publishedAt,
       score,
-      status: 'new',
+      status: 'scheduled',
+      scheduled_at: scheduledAt,
     });
 
     return { meta: { changes: 1 } };

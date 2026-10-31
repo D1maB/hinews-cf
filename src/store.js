@@ -2,12 +2,12 @@ import { normalizeTitle } from './dedup.js';
 import { scoreTitle, MIN_SCORE } from './score.js';
 
 const INSERT_ITEM = `
-  INSERT OR IGNORE INTO items (feed_id, feed_name, title, url, published_at, score, status)
-  VALUES (?, ?, ?, ?, ?, ?, 'new')
+  INSERT OR IGNORE INTO items (feed_id, feed_name, title, url, published_at, score, status, scheduled_at)
+  VALUES (?, ?, ?, ?, ?, ?, 'scheduled', ?)
 `;
 
 const LIST_ITEMS = `
-  SELECT feed_id, feed_name, title, url, published_at, score, status
+  SELECT feed_id, feed_name, title, url, published_at, score, status, scheduled_at
   FROM items
   ORDER BY id
 `;
@@ -60,7 +60,7 @@ export async function saveItems(db, items) {
   const statements = newItems.map((item) =>
     db
       .prepare(INSERT_ITEM)
-      .bind(item.feedId, item.feedName, item.title, item.url, item.publishedAt, item.score),
+      .bind(item.feedId, item.feedName, item.title, item.url, item.publishedAt, item.score, item.scheduledAt ?? null),
   );
 
   const results2 = await db.batch(statements);
@@ -116,6 +116,26 @@ export async function setLastSync(db, value) {
   await db.prepare(SET_META).bind('last_sync_at', value).run();
 }
 
+const SELECT_SCHEDULED_AT = `
+  SELECT scheduled_at
+  FROM items
+`;
+
+/**
+ * Returns the latest scheduled timestamp currently stored, if any.
+ *
+ * @param {D1Database} db
+ * @returns {Promise<string | null>}
+ */
+export async function getLastScheduledAt(db) {
+  const { results = [] } = await db.prepare(SELECT_SCHEDULED_AT).all();
+  const values = results.map((row) => row.scheduled_at).filter(Boolean);
+  if (values.length === 0) {
+    return null;
+  }
+  return values.reduce((latest, value) => (value > latest ? value : latest));
+}
+
 const SELECT_UNSCORED = `
   SELECT url, title
   FROM items
@@ -142,4 +162,6 @@ export async function backfillScores(db) {
   }
 
   await db.prepare('DELETE FROM items WHERE score IS NOT NULL AND score <= ?').bind(MIN_SCORE).run();
+
+  await db.prepare("UPDATE items SET status = 'scheduled' WHERE status IS NULL OR status = 'new'").run();
 }
