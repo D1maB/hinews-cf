@@ -1,4 +1,5 @@
 import { loadFeeds, toIsoDate } from './feeds.js';
+import { MIN_SCORE } from './score.js';
 import { saveItems, setLastSync } from './store.js';
 import { dedupItems } from './dedup.js';
 
@@ -29,7 +30,7 @@ export async function ingestFeeds(env) {
     })),
   );
 
-  const prepared = dedupItems(items).filter((item) => item.score > 60);
+  const prepared = dedupItems(items).filter((item) => item.score > MIN_SCORE);
   const inserted = await saveItems(env.DB, prepared);
 
   await setLastSync(env.DB, new Date().toISOString());

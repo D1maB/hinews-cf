@@ -31,6 +31,8 @@ const POSITIVE_KEYWORDS = [
   'latency',
 ];
 
+export const MIN_SCORE = 60;
+
 const NEGATIVE_KEYWORDS = [
   'smartphone',
   'phone',
