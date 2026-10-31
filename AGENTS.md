@@ -66,13 +66,21 @@ All local infrastructure runs in Docker on Alpine:
 - Services are defined in `docker-compose.yml`; keep it compatible with both the
   `docker compose` plugin and the legacy `docker-compose` CLI (Compose file 3.8).
 - The `dev` service serves the worker on port `8787`.
-- The `test` service runs the suite under the `test` profile.
+- The `test` and `deploy` services run under their own profiles.
 - Add new infrastructure as compose services rather than host-level tooling.
 - Do not commit `node_modules`, `.wrangler`, or other local runtime artifacts.
+- Keep `docker-compose.yml` compatible with the legacy `docker-compose` CLI, which
+  the npm scripts call.
 
 ## Local development
 
-- `docker compose up --build` starts the worker locally with Wrangler.
-- `docker compose run --rm test` runs the test suite.
-- `npm run deploy` publishes the worker to Cloudflare (runs on the host).
-- Host fallbacks (`npm run dev`, `npm test`) still work for quick checks.
+The npm scripts are the public interface and always go through Docker:
+
+- `npm run dev` — build and start the worker locally with Wrangler.
+- `npm test` — run the test suite in a one-off container.
+- `npm run deploy` — deploy with `CLOUDFLARE_API_TOKEN` from the environment.
+
+The `:worker` and `:unit` scripts (`dev:worker`, `test:unit`, `deploy:worker`) are
+container entry points that run the raw Node and Wrangler commands. Do not call them
+from other npm scripts that already run inside a container, to avoid recursive Docker
+invocations. They also work directly on the host for quick checks.
