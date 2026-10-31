@@ -54,7 +54,7 @@ Write clean, readable JavaScript as an experienced developer would:
 ## Testing
 
 - Every behavioral change needs a test.
-- Run `./scripts/compose run --rm test` before committing; all tests must pass.
+- Run `docker-compose run --rm test` before committing; all tests must pass.
 - Tests use the built-in `node:test` runner inside the container and live in `test/`.
 - Test behavior and observable output, not implementation details.
 
@@ -70,15 +70,13 @@ All local infrastructure runs in Docker on Alpine:
 - The image is built from `frolvlad/alpine-glibc:alpine-3.21` (see
   `docker/Dockerfile`), because Wrangler's `workerd` runtime is glibc-linked and cannot
   run on musl-only Alpine.
-- Keep `docker-compose.yml` compatible with both the standalone `docker-compose` CLI
-  and the `docker compose` plugin (Compose file 3.8).
+- Keep `docker-compose.yml` compatible with `docker-compose` v1 (Compose file 3.8).
+- Use the standalone `docker-compose` CLI for every command, run from the repository
+  root.
 - The `app` service serves the worker on port `8787`.
 - The `test` and `deploy` services run under their own profiles.
 - Add new infrastructure as compose services rather than host-level tooling.
 - Do not commit `node_modules`, `.wrangler`, `.env`, or other local runtime artifacts.
-- `scripts/compose` prefers the standalone `docker-compose` CLI and falls back to the
-  `docker compose` plugin, points at the root `docker-compose.yml`, and loads `.env`;
-  use it for automation and wrappers.
 - Docker is the only supported runtime. Do not add host-level Node, Wrangler, or test
   scripts.
 - Raw runtime commands (`npx wrangler`, `node --test`) live in `docker-compose.yml`.
@@ -92,13 +90,13 @@ All local infrastructure runs in Docker on Alpine:
   and Docker.
 - Commit `.env.example` with empty values; never commit real credentials.
 - Never hardcode secrets in `docker-compose.yml`, source files, or scripts.
-- `scripts/compose` loads `.env` through `--env-file`.
+- `docker-compose` loads `.env` automatically from the repository root.
 
 ## Local development
 
-- `./scripts/compose up -d --build app` — build and start the worker in the background
-  on port `8787`.
-- `./scripts/compose logs -f app` — follow the worker logs.
-- `./scripts/compose down` — stop and remove the containers.
-- `./scripts/compose run --rm test` — run the test suite.
-- `./scripts/compose run --rm deploy` — deploy using `CLOUDFLARE_API_TOKEN`.
+- `docker-compose up -d --build app` — build and start the worker in the background on
+  port `8787`.
+- `docker-compose logs -f app` — follow the worker logs.
+- `docker-compose down` — stop and remove the containers.
+- `docker-compose run --rm test` — run the test suite.
+- `docker-compose run --rm deploy` — deploy using `CLOUDFLARE_API_TOKEN`.

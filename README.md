@@ -9,7 +9,7 @@ the host.
 
 ## Requirements
 
-- Docker with `docker-compose` (the standalone CLI) or the `docker compose` plugin
+- Docker with the standalone `docker-compose` CLI
 - A Cloudflare API token (only needed for deployment)
 
 ## Configuration
@@ -20,13 +20,13 @@ Copy the example environment file and fill in your credentials:
 cp .env.example .env
 ```
 
-| Variable                | Purpose                                      |
-| ----------------------- | -------------------------------------------- |
-| `CLOUDFLARE_API_TOKEN`  | API token with the Edit Cloudflare Workers template |
+| Variable                | Purpose                                              |
+| ----------------------- | ---------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`  | API token with the Edit Cloudflare Workers template   |
 | `CLOUDFLARE_ACCOUNT_ID` | Optional, when the token can access multiple accounts |
 
-`.env` is ignored by Git and Docker. `scripts/compose` loads it automatically, so
-credentials are never hardcoded in the compose file. Commit only `.env.example`.
+`.env` is ignored by Git and Docker. `docker-compose` loads it automatically when run
+from the repository root. Commit only `.env.example`.
 
 ## Run the app locally
 
@@ -35,7 +35,7 @@ The app runs entirely in Docker, so you do not need Node.js installed on the hos
 1. From the repository root, build the image and start the worker in the background:
 
    ```bash
-   ./scripts/compose up -d --build app
+   docker-compose up -d --build app
    ```
 
    The first run builds the Alpine image and installs dependencies; later runs reuse
@@ -50,33 +50,24 @@ The app runs entirely in Docker, so you do not need Node.js installed on the hos
 3. Follow the worker logs when needed:
 
    ```bash
-   ./scripts/compose logs -f app
+   docker-compose logs -f app
    ```
 
 4. Stop and remove the container:
 
    ```bash
-   ./scripts/compose down
+   docker-compose down
    ```
 
-Source files are mounted into the container, so edits reload automatically. The helper
-prefers `docker-compose` and falls back to `docker compose`, always using the root
-`docker-compose.yml`. The equivalent plain Docker commands are:
-
-```bash
-docker-compose up -d --build app
-docker-compose logs -f app
-docker-compose down
-```
-
-`.env` is not needed for local development; it is only required for deployment.
+Source files are mounted into the container, so edits reload automatically. `.env` is
+not needed for local development; it is only required for deployment.
 
 ## Tests
 
 Run the test suite in a one-off container:
 
 ```bash
-./scripts/compose run --rm test
+docker-compose run --rm test
 ```
 
 The tests use the built-in Node.js test runner inside the container, so no extra test
@@ -89,12 +80,6 @@ Create an API token with the **Edit Cloudflare Workers** template, put it in `.e
 deploy:
 
 ```bash
-./scripts/compose run --rm deploy
-```
-
-The equivalent plain Docker command is:
-
-```bash
 docker-compose run --rm deploy
 ```
 
@@ -104,7 +89,6 @@ docker-compose run --rm deploy
 .
 ├── docker/
 │   └── Dockerfile        # Alpine-based image with glibc for workerd
-├── scripts/compose       # Compose CLI wrapper that loads .env
 ├── src/index.js          # Worker entry point
 ├── test/index.test.js    # Unit tests
 ├── .dockerignore         # Build context exclusions (must stay at the context root)
