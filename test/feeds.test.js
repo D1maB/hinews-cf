@@ -39,11 +39,13 @@ test('parses RSS items, decoding entities and dropping unsafe rows', () => {
       title: 'RTX 5090 review & benchmarks',
       link: 'https://example.com/rtx-5090?a=1&b=2',
       publishedAt: 'Mon, 01 Jan 2024 12:00:00 GMT',
+      score: 70,
     },
     {
       title: "Ryzen 9950X is 'great'",
       link: 'https://example.com/ryzen-9950x',
       publishedAt: 'Tue, 02 Jan 2024 12:00:00 GMT',
+      score: 60,
     },
   ]);
 });

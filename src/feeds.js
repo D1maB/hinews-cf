@@ -1,4 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
+import { scoreTitle } from './score.js';
+import { dedupByTitle } from './dedup.js';
 
 export const FEEDS = [
   { id: 'tomshardware', name: "Tom's Hardware", url: 'https://www.tomshardware.com/feeds/all' },
@@ -8,7 +10,7 @@ export const FEEDS = [
   { id: 'guru3d', name: 'Guru3D', url: 'https://www.guru3d.com/rss.xml' },
 ];
 
-export const ITEMS_PER_FEED = 5;
+export const ITEMS_PER_FEED = 10;
 
 export const FEED_REQUEST_INIT = {
   headers: {
@@ -121,14 +123,19 @@ export function parseRssItems(xml) {
     return [];
   }
 
-  return toArray(channel.item ?? channel.entry)
-    .map((item) => ({
-      title: readText(item.title),
-      link: normalizeLink(readLink(item.link)),
-      publishedAt: readText(item.pubDate ?? item.published ?? item.updated),
-    }))
-    .filter(({ title, link }) => title && link)
-    .slice(0, ITEMS_PER_FEED);
+  const items = toArray(channel.item ?? channel.entry)
+    .map((item) => {
+      const title = readText(item.title);
+      return {
+        title,
+        link: normalizeLink(readLink(item.link)),
+        publishedAt: readText(item.pubDate ?? item.published ?? item.updated),
+        score: scoreTitle(title),
+      };
+    })
+    .filter(({ title, link }) => title && link);
+
+  return dedupByTitle(items).slice(0, ITEMS_PER_FEED);
 }
 
 /**

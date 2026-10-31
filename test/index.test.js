@@ -16,7 +16,7 @@ function rssFor(feedId) {
 <rss version="2.0">
   <channel>
     <item>
-      <title>${feedId} story</title>
+      <title>${feedId} PC GPU benchmark</title>
       <link>https://example.com/${feedId}/story</link>
       <pubDate>Mon, 01 Jan 2024 12:00:00 GMT</pubDate>
     </item>

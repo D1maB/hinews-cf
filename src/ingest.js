@@ -1,5 +1,6 @@
 import { loadFeeds, toIsoDate } from './feeds.js';
-import { saveItems } from './store.js';
+import { saveItems, setLastSync } from './store.js';
+import { dedupItems } from './dedup.js';
 
 /**
  * Parses every feed and persists its items. Duplicate URLs are ignored by the
@@ -24,12 +25,29 @@ export async function ingestFeeds(env) {
       title: item.title,
       url: item.link,
       publishedAt: toIsoDate(item.publishedAt),
+      score: item.score,
     })),
   );
 
-  const inserted = await saveItems(env.DB, items);
+  const prepared = dedupItems(items).filter((item) => item.score > 70);
+  const inserted = await saveItems(env.DB, prepared);
+
+  await setLastSync(env.DB, new Date().toISOString());
 
   console.log(`Stored ${inserted} new item(s) from ${feeds.length} feeds`);
 
-  return { inserted, feeds };
+  return {
+    inserted,
+    feeds,
+    items: prepared.map((item) => ({
+      feed_id: item.feedId,
+      feed_name: item.feedName,
+      title: item.title,
+      url: item.url,
+      published_at: item.publishedAt,
+      score: item.score,
+    })),
+  };
 }
+
+

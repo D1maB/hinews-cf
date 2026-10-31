@@ -14,7 +14,7 @@ function rssFor(feedId) {
 <rss version="2.0">
   <channel>
     <item>
-      <title>${feedId} story</title>
+      <title>${feedId} PC GPU benchmark</title>
       <link>https://example.com/${feedId}/story</link>
       <pubDate>Mon, 01 Jan 2024 12:00:00 GMT</pubDate>
     </item>
@@ -48,6 +48,22 @@ test('stores parsed feed items in the database', async (t) => {
   assert.equal(inserted, FEEDS.length);
   assert.equal(db.rows.size, FEEDS.length);
   assert.ok(db.rows.has('https://example.com/tomshardware/story'));
+});
+
+test('writes a URL only once when several feeds share it', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const db = createFakeDb();
+  const sharedStory = rssFor('tomshardware');
+  const env = {
+    ...localEnv({ techpowerup: sharedStory }),
+    DB: db,
+  };
+
+  const { inserted } = await ingestFeeds(env);
+
+  assert.equal(inserted, FEEDS.length - 1);
+  assert.equal(db.rows.size, FEEDS.length - 1);
+  assert.equal(db.writes, FEEDS.length);
 });
 
 test('does not store the same news URL twice', async (t) => {

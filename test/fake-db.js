@@ -1,5 +1,5 @@
 const INSERT_SQL = 'INSERT OR IGNORE INTO items';
-const COUNT_SQL = 'COUNT(*)';
+const EXISTS_SQL = 'LIMIT 1';
 
 class FakeStatement {
   constructor(database, sql) {
@@ -14,28 +14,84 @@ class FakeStatement {
   }
 
   async first() {
-    if (!this.sql.includes(COUNT_SQL)) {
+    this.database.reads += 1;
+
+    if (this.sql.toLowerCase().includes('meta')) {
+      const key = this.args[0];
+      const value = this.database.meta.get(key);
+      if (value == null) {
+        return null;
+      }
+      this.database.scans += 1;
+      return { value };
+    }
+
+    if (!this.sql.includes(EXISTS_SQL)) {
       throw new Error(`Unexpected SQL: ${this.sql}`);
     }
 
-    return { count: this.database.rows.size };
+    if (this.database.rows.size > 0) {
+      this.database.scans += 1;
+      return { present: 1 };
+    }
+    return null;
   }
 
   async all() {
-    return { results: [...this.database.rows.values()] };
+    this.database.reads += 1;
+
+    if (this.sql.toLowerCase().includes('meta')) {
+      const results = [...this.database.meta.entries()].map(([key, value]) => ({ key, value }));
+      this.database.scans += results.length;
+      return { results };
+    }
+
+    const results = [...this.database.rows.values()].sort(
+      (left, right) =>
+        left.feed_id.localeCompare(right.feed_id) ||
+        String(right.published_at ?? '').localeCompare(String(left.published_at ?? '')),
+    );
+
+    this.database.scans += results.length;
+
+    return { results };
   }
 
   async run() {
+    if (this.sql.toLowerCase().includes('meta')) {
+      const [key, value] = this.args;
+      this.database.writes += 1;
+      this.database.meta.set(key, value);
+      return { meta: { changes: 1 } };
+    }
+
+    if (this.sql.toLowerCase().includes('update')) {
+      const [score, url] = this.args;
+      const row = this.database.rows.get(url);
+      if (row) {
+        row.score = score;
+        this.database.writes += 1;
+      }
+      return { meta: { changes: row ? 1 : 0 } };
+    }
+
     if (!this.sql.includes(INSERT_SQL)) {
       throw new Error(`Unexpected SQL: ${this.sql}`);
     }
 
-    const [feedId, feedName, title, url, publishedAt] = this.args;
+    const [feedId, feedName, title, url, publishedAt, score] = this.args;
 
     if (this.database.rows.has(url)) {
       return { meta: { changes: 0 } };
     }
 
+    for (const row of this.database.rows.values()) {
+      if (String(row.title ?? '').trim().toLowerCase() === String(title ?? '').trim().toLowerCase()) {
+        return { meta: { changes: 0 } };
+      }
+    }
+
+    this.database.writes += 1;
     this.database.rows.set(url, {
       id: this.database.rows.size + 1,
       feed_id: feedId,
@@ -43,6 +99,8 @@ class FakeStatement {
       title,
       url,
       published_at: publishedAt,
+      score,
+      status: 'new',
     });
 
     return { meta: { changes: 1 } };
@@ -58,6 +116,10 @@ class FakeStatement {
 export function createFakeDb(rows = []) {
   const db = {
     rows: new Map(rows.map((row) => [row.url, { ...row }])),
+    meta: new Map(),
+    writes: 0,
+    reads: 0,
+    scans: 0,
     prepare: (sql) => new FakeStatement(db, sql),
     batch: (statements) => Promise.all(statements.map((statement) => statement.run())),
   };
