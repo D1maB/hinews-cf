@@ -3,7 +3,7 @@ version: "3.8"
 services:
   dev:
     build: .
-    command: npm run dev -- --ip 0.0.0.0 --port 8787
+    command: npm run dev:worker -- --ip 0.0.0.0 --port 8787
     ports:
       - "8787:8787"
     volumes:
@@ -20,7 +20,7 @@ services:
 
   test:
     build: .
-    command: npm test
+    command: npm run test:unit
     profiles:
       - test
     volumes:
@@ -28,6 +28,18 @@ services:
       - node_modules:/app/node_modules
     environment:
       CI: "true"
+
+  deploy:
+    build: .
+    command: npm run deploy:worker
+    profiles:
+      - deploy
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    environment:
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
 
 volumes:
   node_modules:

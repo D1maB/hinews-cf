@@ -5,9 +5,12 @@
   "description": "A minimal Cloudflare Worker that says Hello World",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "test": "node --test"
+    "dev": "docker-compose up --build dev",
+    "test": "docker-compose run --rm test",
+    "deploy": "docker-compose run --rm deploy",
+    "dev:worker": "wrangler dev",
+    "test:unit": "node --test",
+    "deploy:worker": "wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "^3.114.17"
