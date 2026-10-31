@@ -69,18 +69,18 @@ All local infrastructure runs in Docker on Alpine:
 - The `test` and `deploy` services run under their own profiles.
 - Add new infrastructure as compose services rather than host-level tooling.
 - Do not commit `node_modules`, `.wrangler`, or other local runtime artifacts.
-- Keep `docker-compose.yml` compatible with the legacy `docker-compose` CLI, which
-  the npm scripts call.
+- `scripts/compose` selects the available Compose CLI (`docker compose` or
+  `docker-compose`); reuse it in npm scripts.
+- Docker is the only supported runtime. Do not add host-level Node, Wrangler, or test
+  scripts.
+- Raw runtime commands (`npx wrangler`, `node --test`) live in `docker-compose.yml`,
+  never in npm scripts that execute on the host.
+- The `dev`, `test`, and `deploy` npm scripts are thin Docker wrappers; keep them that
+  way.
 
 ## Local development
 
-The npm scripts are the public interface and always go through Docker:
-
-- `npm run dev` — build and start the worker locally with Wrangler.
-- `npm test` — run the test suite in a one-off container.
-- `npm run deploy` — deploy with `CLOUDFLARE_API_TOKEN` from the environment.
-
-The `:worker` and `:unit` scripts (`dev:worker`, `test:unit`, `deploy:worker`) are
-container entry points that run the raw Node and Wrangler commands. Do not call them
-from other npm scripts that already run inside a container, to avoid recursive Docker
-invocations. They also work directly on the host for quick checks.
+- `npm run dev` or `docker compose up --build dev` — worker on port `8787`.
+- `npm test` or `docker compose run --rm test` — run the test suite.
+- `npm run deploy` or `docker compose run --rm deploy` — deploy using
+  `CLOUDFLARE_API_TOKEN`.
