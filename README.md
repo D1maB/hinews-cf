@@ -29,24 +29,37 @@ cp .env.example .env
 `.env` is ignored by Git and Docker. `scripts/compose` loads it automatically, so
 credentials are never hardcoded in the compose file. Commit only `.env.example`.
 
-## Local development
+## Run the app locally
 
-Build the image and start the worker:
+The app runs entirely in Docker, so you do not need Node.js installed on the host.
 
-```bash
-./scripts/compose up --build app
-```
+1. From the repository root, build the image and start the worker:
 
-The helper picks `docker compose` or the legacy `docker-compose` and always uses
+   ```bash
+   ./scripts/compose up --build app
+   ```
+
+   The first run builds the Alpine image and installs dependencies; later runs reuse
+   the cached layers.
+
+2. Open <http://localhost:8787>. The page and the terminal running the container both
+   show:
+
+   ```
+   Hello World
+   ```
+
+3. Stop the worker with `Ctrl+C`.
+
+Source files are mounted into the container, so edits reload automatically. The helper
+picks `docker compose` or the legacy `docker-compose` and always uses
 `docker/compose.yml`. The equivalent plain Docker command is:
 
 ```bash
 docker compose -f docker/compose.yml up --build app
 ```
 
-Then open <http://localhost:8787>. The response body is `Hello World`, and the same
-message is printed to the terminal running the worker. Source changes reload
-automatically; stop the container with `Ctrl+C`.
+`.env` is not needed for local development; it is only required for deployment.
 
 ## Tests
 
