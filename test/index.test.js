@@ -3,23 +3,45 @@ import test from 'node:test';
 
 import worker from '../src/index.js';
 
-const TEST_REQUEST = new Request('https://example.com/');
+const REQUEST = new Request('https://example.com/');
 
-test('responds with a plain-text greeting', async (t) => {
-  t.mock.method(console, 'log', () => {});
+const RSS = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Example feed</title>
+    <item>
+      <title><![CDATA[RTX 5090 review &amp; benchmarks]]></title>
+      <link>https://example.com/rtx-5090?a=1&amp;b=2</link>
+      <pubDate>Mon, 01 Jan 2024 12:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>`;
 
-  const response = await worker.fetch(TEST_REQUEST);
+test('renders news from every feed', async (t) => {
+  const fetchMock = t.mock.method(globalThis, 'fetch', async () => new Response(RSS));
+
+  const response = await worker.fetch(REQUEST);
+  const html = await response.text();
 
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get('content-type'), 'text/plain;charset=UTF-8');
-  assert.equal(await response.text(), 'Hello World');
+  assert.match(response.headers.get('content-type'), /^text\/html/);
+  assert.equal(fetchMock.mock.callCount(), 5);
+  assert.match(html, /Tom&#39;s Hardware/);
+  assert.match(html, /KitGuru/);
+  assert.match(html, /RTX 5090 review &amp; benchmarks/);
+  assert.match(html, /https:\/\/example\.com\/rtx-5090\?a=1&amp;b=2/);
 });
 
-test('logs the greeting to the console', async (t) => {
-  const log = t.mock.method(console, 'log', () => {});
+test('keeps rendering when a feed fails', async (t) => {
+  t.mock.method(globalThis, 'fetch', async (url) =>
+    url.includes('techpowerup')
+      ? new Response('unavailable', { status: 503, statusText: 'Service Unavailable' })
+      : new Response(RSS),
+  );
 
-  await worker.fetch(TEST_REQUEST);
+  const html = await (await worker.fetch(REQUEST)).text();
 
-  assert.equal(log.mock.callCount(), 1);
-  assert.deepEqual(log.mock.calls[0].arguments, ['Hello World']);
+  assert.match(html, /TechPowerUp/);
+  assert.match(html, /HTTP 503 Service Unavailable/);
+  assert.match(html, /RTX 5090 review/);
 });
