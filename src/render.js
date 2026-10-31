@@ -52,9 +52,8 @@ export function renderItem(item) {
   const published = formatDate(item.published_at);
   const time = published ? `<time>${escapeHtml(published)}</time>` : '';
   const score = item.score != null ? `<span class="score">${escapeHtml(String(item.score))}</span>` : '';
-  const status = item.status && item.status !== 'new' ? '' : '<span class="status">New</span>';
 
-  return `<li><a href="${escapeHtml(safeUrl(item.url))}">${escapeHtml(item.title)}</a>${status}${score}${time}</li>`;
+  return `<li><a href="${escapeHtml(safeUrl(item.url))}">${escapeHtml(item.title)}</a>${score}${time}</li>`;
 }
 
 /**

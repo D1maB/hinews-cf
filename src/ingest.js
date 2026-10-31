@@ -29,7 +29,7 @@ export async function ingestFeeds(env) {
     })),
   );
 
-  const prepared = dedupItems(items).filter((item) => item.score > 70);
+  const prepared = dedupItems(items).filter((item) => item.score > 60);
   const inserted = await saveItems(env.DB, prepared);
 
   await setLastSync(env.DB, new Date().toISOString());
