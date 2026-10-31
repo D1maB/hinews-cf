@@ -136,10 +136,11 @@ export function renderPage(feeds, total, lastSync = null) {
     .feed h2 { margin: 0 0 0.75rem; font-size: 1.1rem; font-weight: 600; }
     .feed h2 a { color: var(--accent); text-decoration: none; }
     .feed h2 a:hover { text-decoration: underline; }
-    ul { list-style: none; padding: 0; margin: 0; }
+    ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
     li {
-      padding: 0.6rem 0;
-      border-top: 1px solid var(--border);
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
     }
     li:first-child { border-top: none; padding-top: 0; }
     li a { color: var(--text); text-decoration: none; font-weight: 500; }
