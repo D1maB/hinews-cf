@@ -9,8 +9,7 @@ the host.
 
 ## Requirements
 
-- Docker with Docker Compose (the `docker compose` plugin or the legacy `docker-compose`
-  CLI)
+- Docker with `docker-compose` (the standalone CLI) or the `docker compose` plugin
 - A Cloudflare API token (only needed for deployment)
 
 ## Configuration
@@ -52,11 +51,11 @@ The app runs entirely in Docker, so you do not need Node.js installed on the hos
 3. Stop the worker with `Ctrl+C`.
 
 Source files are mounted into the container, so edits reload automatically. The helper
-picks `docker compose` or the legacy `docker-compose` and always uses the root
+prefers `docker-compose` and falls back to `docker compose`, always using the root
 `docker-compose.yml`. The equivalent plain Docker command is:
 
 ```bash
-docker compose up --build app
+docker-compose up --build app
 ```
 
 `.env` is not needed for local development; it is only required for deployment.
@@ -85,7 +84,7 @@ deploy:
 The equivalent plain Docker command is:
 
 ```bash
-docker compose run --rm deploy
+docker-compose run --rm deploy
 ```
 
 ## Project structure

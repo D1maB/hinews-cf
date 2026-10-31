@@ -70,15 +70,15 @@ All local infrastructure runs in Docker on Alpine:
 - The image is built from `frolvlad/alpine-glibc:alpine-3.21` (see
   `docker/Dockerfile`), because Wrangler's `workerd` runtime is glibc-linked and cannot
   run on musl-only Alpine.
-- Keep `docker-compose.yml` compatible with both the `docker compose` plugin and the
-  legacy `docker-compose` CLI (Compose file 3.8).
+- Keep `docker-compose.yml` compatible with both the standalone `docker-compose` CLI
+  and the `docker compose` plugin (Compose file 3.8).
 - The `app` service serves the worker on port `8787`.
 - The `test` and `deploy` services run under their own profiles.
 - Add new infrastructure as compose services rather than host-level tooling.
 - Do not commit `node_modules`, `.wrangler`, `.env`, or other local runtime artifacts.
-- `scripts/compose` selects the available Compose CLI (`docker compose` or
-  `docker-compose`), points it at the root `docker-compose.yml`, and loads `.env`; use
-  it for automation and wrappers.
+- `scripts/compose` prefers the standalone `docker-compose` CLI and falls back to the
+  `docker compose` plugin, points at the root `docker-compose.yml`, and loads `.env`;
+  use it for automation and wrappers.
 - Docker is the only supported runtime. Do not add host-level Node, Wrangler, or test
   scripts.
 - Raw runtime commands (`npx wrangler`, `node --test`) live in `docker-compose.yml`.
