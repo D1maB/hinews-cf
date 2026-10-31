@@ -4,7 +4,8 @@ A minimal [Cloudflare Worker](https://developers.cloudflare.com/workers/) that l
 `Hello World` to the console and returns it as the response body.
 
 Everything — development, tests, and deployment — runs in Docker on Alpine. Docker is
-the only supported runtime.
+the only supported runtime; no Node.js, Wrangler, or test runner is installed or run on
+the host.
 
 ## Requirements
 
@@ -14,32 +15,25 @@ the only supported runtime.
 
 ## Local development
 
-Start the worker:
+Build the image and start the worker:
 
 ```bash
 docker compose up --build dev
-```
-
-Or use the npm shortcut, which runs the same command:
-
-```bash
-npm run dev
 ```
 
 Then open <http://localhost:8787>. The response body is `Hello World`, and the same
 message is printed to the terminal running the worker. Source changes reload
 automatically; stop the container with `Ctrl+C`.
 
+> On systems without the Compose plugin, use `docker-compose` instead of
+> `docker compose`.
+
 ## Tests
+
+Run the test suite in a one-off container:
 
 ```bash
 docker compose run --rm test
-```
-
-Or:
-
-```bash
-npm test
 ```
 
 The tests use the built-in Node.js test runner inside the container, so no extra test
@@ -54,12 +48,6 @@ deploy:
 ```bash
 export CLOUDFLARE_API_TOKEN="your-token"
 docker compose run --rm deploy
-```
-
-Or:
-
-```bash
-npm run deploy
 ```
 
 Set `CLOUDFLARE_ACCOUNT_ID` as well if your token has access to more than one account.
