@@ -52,11 +52,11 @@ The app runs entirely in Docker, so you do not need Node.js installed on the hos
 3. Stop the worker with `Ctrl+C`.
 
 Source files are mounted into the container, so edits reload automatically. The helper
-picks `docker compose` or the legacy `docker-compose` and always uses
-`docker/compose.yml`. The equivalent plain Docker command is:
+picks `docker compose` or the legacy `docker-compose` and always uses the root
+`docker-compose.yml`. The equivalent plain Docker command is:
 
 ```bash
-docker compose -f docker/compose.yml up --build app
+docker compose up --build app
 ```
 
 `.env` is not needed for local development; it is only required for deployment.
@@ -85,7 +85,7 @@ deploy:
 The equivalent plain Docker command is:
 
 ```bash
-docker compose --env-file .env -f docker/compose.yml run --rm deploy
+docker compose run --rm deploy
 ```
 
 ## Project structure
@@ -93,13 +93,13 @@ docker compose --env-file .env -f docker/compose.yml run --rm deploy
 ```
 .
 ├── docker/
-│   ├── compose.yml       # App, test, and deploy services
 │   └── Dockerfile        # Alpine-based image with glibc for workerd
 ├── scripts/compose       # Compose CLI wrapper that loads .env
 ├── src/index.js          # Worker entry point
 ├── test/index.test.js    # Unit tests
 ├── .dockerignore         # Build context exclusions (must stay at the context root)
 ├── .env.example          # Template for local secrets
+├── docker-compose.yml    # App, test, and deploy services
 ├── wrangler.toml         # Wrangler configuration
 └── AGENTS.md             # Conventions for agents and contributors
 ```
