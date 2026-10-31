@@ -40,10 +40,13 @@ async function handleRequest(_request, env) {
 function handleScheduled(controller, env, ctx) {
   const cron = controller?.cron ?? '';
 
-  if (cron === '* * * * *') {
-    ctx.waitUntil(publishScheduled(env));
-  } else {
-    ctx.waitUntil(ingestFeeds(env));
+  switch (cron) {
+    case '* * * * *':
+      ctx.waitUntil(publishScheduled(env));
+      break;
+    default:
+      ctx.waitUntil(ingestFeeds(env));
+      break;
   }
 }
 
