@@ -50,7 +50,9 @@ export function formatDate(value) {
  */
 export function renderItem(item) {
   const published = formatDate(item.published_at);
-  const score = item.score != null ? `<span class="score">${escapeHtml(String(item.score))}</span>` : '';
+  const scoreValue = item.score != null ? Number(item.score) : null;
+  const scoreClass = scoreValue == null ? '' : scoreValue >= 80 ? ' high' : scoreValue >= 60 ? ' mid' : '';
+  const score = scoreValue != null ? `<span class="score${scoreClass}">${escapeHtml(String(scoreValue))}</span>` : '';
   const time = published ? `<time>${escapeHtml(published)}</time>` : '';
 
   return `<li>
@@ -148,12 +150,18 @@ export function renderPage(feeds, total, lastSync = null) {
     .meta { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; }
     .score {
       display: inline-block;
-      padding: 0.1rem 0.5rem;
+      padding: 0.15rem 0.55rem;
       border-radius: 999px;
       background: var(--score-bg);
       color: var(--score-text);
       font-size: 0.75rem;
       font-weight: 600;
+    }
+    .score.high { background: #dcfce7; color: #166534; }
+    .score.mid { background: #fef9c3; color: #854d0e; }
+    @media (prefers-color-scheme: dark) {
+      .score.high { background: #14532d; color: #bbf7d0; }
+      .score.mid { background: #713f12; color: #fef08a; }
     }
     time { color: var(--muted); font-size: 0.8rem; }
     .empty { color: var(--muted); font-style: italic; margin: 0; }
