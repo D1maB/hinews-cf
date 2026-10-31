@@ -127,7 +127,7 @@ export function renderPage(feeds, total, lastSync = null) {
     h1 { margin: 0 0 0.25rem; font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
     .subtitle { margin: 0; color: var(--muted); font-size: 0.95rem; }
     .sync { margin: 0.5rem 0 0; color: var(--muted); font-size: 0.8rem; }
-    .feeds { display: grid; gap: 1.5rem; grid-template-columns: repeat(2, 1fr); }
+    .feeds { display: flex; flex-direction: column; gap: 1.5rem; }
     .feed {
       background: var(--card);
       border: 1px solid var(--border);
