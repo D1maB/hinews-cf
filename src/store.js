@@ -116,45 +116,6 @@ export async function setLastSync(db, value) {
   await db.prepare(SET_META).bind('last_sync_at', value).run();
 }
 
-const SELECT_ALL_ITEMS = `
-  SELECT id, url, title
-  FROM items
-`;
-
-const DELETE_BY_ID = `
-  DELETE FROM items
-  WHERE id = ?
-`;
-
-/**
- * Removes duplicate rows from the database, keeping the earliest row for each
- * URL and (case-insensitive) title.
- *
- * @param {D1Database} db
- * @returns {Promise<void>}
- */
-export async function dedupDatabase(db) {
-  const { results = [] } = await db.prepare(SELECT_ALL_ITEMS).all();
-  const sorted = [...results].sort((left, right) => left.id - right.id);
-  const seenUrls = new Set();
-  const seenTitles = new Set();
-  const toDelete = [];
-
-  for (const row of sorted) {
-    const titleKey = normalizeTitle(row.title);
-    if (seenUrls.has(row.url) || seenTitles.has(titleKey)) {
-      toDelete.push(row.id);
-    } else {
-      seenUrls.add(row.url);
-      seenTitles.add(titleKey);
-    }
-  }
-
-  for (const id of toDelete) {
-    await db.prepare(DELETE_BY_ID).bind(id).run();
-  }
-}
-
 const SELECT_UNSCORED = `
   SELECT url, title
   FROM items
