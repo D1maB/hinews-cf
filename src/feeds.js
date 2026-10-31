@@ -8,9 +8,7 @@ export const DEFAULT_FEEDS = [
   { id: 'kitguru', name: 'KitGuru', url: 'https://www.kitguru.net/feed/' },
   { id: 'wccftech', name: 'Wccftech', url: 'https://wccftech.com/feed/' },
   { id: 'guru3d', name: 'Guru3D', url: 'https://www.guru3d.com/rss.xml' },
-  { id: 'extremetech', name: 'ExtremeTech', url: 'https://www.extremetech.com/feed' },
   { id: 'pcgamer', name: 'PC Gamer', url: 'https://www.pcgamer.com/rss/' },
-  { id: 'pcworld', name: 'PCWorld', url: 'https://www.pcworld.com/feed' },
   { id: 'hexus', name: 'HEXUS', url: 'http://www.hexus.net/rss/hexus_rss.xml' },
   { id: 'overclock3d', name: 'Overclock3D', url: 'https://overclock3d.net/feed/' },
 ];
