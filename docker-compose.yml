@@ -3,7 +3,7 @@ version: "3.8"
 services:
   dev:
     build: .
-    command: npm run dev:worker -- --ip 0.0.0.0 --port 8787
+    command: npx wrangler dev --ip 0.0.0.0 --port 8787
     ports:
       - "8787:8787"
     volumes:
@@ -20,7 +20,7 @@ services:
 
   test:
     build: .
-    command: npm run test:unit
+    command: node --test
     profiles:
       - test
     volumes:
@@ -31,7 +31,7 @@ services:
 
   deploy:
     build: .
-    command: npm run deploy:worker
+    command: npx wrangler deploy
     profiles:
       - deploy
     volumes:

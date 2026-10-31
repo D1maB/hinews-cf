@@ -1,0 +1,10 @@
+#!/bin/sh
+# Runs the Compose CLI available on this machine: the `docker compose` plugin
+# on modern Docker installs, or the legacy `docker-compose` binary.
+set -eu
+
+if docker compose version >/dev/null 2>&1; then
+  exec docker compose "$@"
+fi
+
+exec docker-compose "$@"
