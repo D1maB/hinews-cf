@@ -138,7 +138,8 @@ export function renderPage(feeds, total, lastSync = null) {
     .feed h2 { margin: 0 0 0.75rem; font-size: 1.1rem; font-weight: 600; }
     .feed h2 a { color: var(--accent); text-decoration: none; }
     .feed h2 a:hover { text-decoration: underline; }
-    ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+    ul { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 1rem; }
+    li { break-inside: avoid; margin-bottom: 0.75rem; }
     li {
       padding: 0.6rem 0.75rem;
       border: 1px solid var(--border);
