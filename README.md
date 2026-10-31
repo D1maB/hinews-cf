@@ -3,7 +3,7 @@
 A minimal [Cloudflare Worker](https://developers.cloudflare.com/workers/) that fetches
 five PC hardware RSS feeds, parses their XML, and renders the latest headlines.
 
-Local development serves feeds downloaded from a local cache; production fetches them
+Local development reads feeds downloaded into local storage; production fetches them
 from the remote sites.
 
 Everything — development, tests, and deployment — runs in Docker on Alpine. Docker is
@@ -41,8 +41,8 @@ The app runs entirely in Docker, so you do not need Node.js installed on the hos
    docker-compose run --rm download-feeds
    ```
 
-   The XML files are stored in the `feeds` Docker volume and served locally by the
-   `feeds` service (`nginx:alpine`).
+   The XML files are stored in the `feeds` Docker volume and read directly through
+   Wrangler's static assets binding.
 
 2. Build the image and start the worker in the background:
 
@@ -81,10 +81,11 @@ The feed list lives in `src/index.js`:
 | Wccftech       | `https://wccftech.com/feed/`              |
 | Guru3D         | `https://www.guru3d.com/rss.xml`          |
 
-In local development the worker reads `feeds/<id>.xml` from the local `feeds` service.
-When deployed, `FEED_BASE_URL` is not set, so the worker fetches the remote URLs above.
-Each feed is fetched concurrently and the latest five items are rendered. If a feed is
-unreachable, its section shows an error while the other feeds still render.
+In local development the worker reads `feeds/<id>.xml` from the mounted `feeds` volume
+through Wrangler's static assets binding. When deployed there is no assets binding, so
+the worker fetches the remote URLs above. Each feed is loaded concurrently and the
+latest five items are rendered. If a feed is missing or unreachable, its section shows
+an error while the other feeds still render.
 
 ## Tests
 
@@ -106,8 +107,8 @@ deploy:
 docker-compose run --rm deploy
 ```
 
-The deployed worker has no `FEED_BASE_URL`, so it fetches the feeds directly from the
-remote sites.
+The deployed worker has no static assets binding, so it fetches the feeds directly from
+the remote sites.
 
 ## Project structure
 
@@ -120,7 +121,8 @@ remote sites.
 ├── test/index.test.js          # Unit tests
 ├── .dockerignore               # Build context exclusions (must stay at the context root)
 ├── .env.example                # Template for local secrets
-├── docker-compose.yml          # App, feeds, test, deploy, and download services
-├── wrangler.toml               # Wrangler configuration
+├── docker-compose.yml          # App, test, deploy, and download services
+├── wrangler.toml               # Production configuration (remote feeds)
+├── wrangler.dev.toml           # Local configuration (assets binding for feeds)
 └── AGENTS.md                   # Conventions for agents and contributors
 ```

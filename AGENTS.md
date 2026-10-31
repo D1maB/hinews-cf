@@ -74,12 +74,12 @@ All local infrastructure runs in Docker on Alpine:
 - Keep `docker-compose.yml` compatible with `docker-compose` v1 (Compose file 3.8).
 - Use the standalone `docker-compose` CLI for every command, run from the repository
   root.
-- The `app` service serves the worker on port `8787`.
-- The `feeds` service serves the downloaded XML from the `feeds` volume using
-  `nginx:alpine`.
-- The `download-feeds` service refreshes that volume; local development passes
-  `FEED_BASE_URL=http://feeds` to the worker.
-- Deployment does not set `FEED_BASE_URL`, so production fetches the remote feeds.
+- The `app` service serves the worker on port `8787` and mounts the `feeds` volume
+  read-only.
+- Local development uses `wrangler.dev.toml`, whose `[assets]` section exposes the
+  downloaded XML to the worker through `env.ASSETS`.
+- The `download-feeds` service refreshes the `feeds` volume.
+- Deployment has no assets binding, so production fetches the remote feeds.
 - The `test` and `deploy` services run under their own profiles.
 - Add new infrastructure as compose services rather than host-level tooling.
 - Do not commit `node_modules`, `.wrangler`, `.env`, or other local runtime artifacts.

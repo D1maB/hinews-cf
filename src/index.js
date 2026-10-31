@@ -35,31 +35,53 @@ const HTML_ESCAPES = {
 };
 
 /**
- * Fetches and parses one RSS feed.
+ * Loads and parses one RSS feed, from local storage when available.
  *
- * @param {{ name: string, url: string }} feed
- * @param {string} url
+ * @param {{ id: string, name: string, url: string }} feed
+ * @param {Record<string, unknown>} env
+ * @param {Request} request
  * @returns {Promise<{ name: string, url: string, items: Array<{ title: string, link: string, publishedAt: string }> }>}
  */
-async function loadFeed(feed, url) {
-  const response = await fetch(url, FEED_REQUEST_INIT);
+async function loadFeed(feed, env, request) {
+  const xml = env.ASSETS
+    ? await readLocalFeed(env.ASSETS, feed, request)
+    : await fetchRemoteFeed(feed);
+
+  return { ...feed, items: parseRssItems(xml) };
+}
+
+/**
+ * Reads a downloaded feed from the local static assets binding.
+ *
+ * @param {{ fetch: (input: URL) => Promise<Response> }} assets
+ * @param {{ id: string }} feed
+ * @param {Request} request
+ * @returns {Promise<string>}
+ */
+async function readLocalFeed(assets, feed, request) {
+  const response = await assets.fetch(new URL(`/${feed.id}.xml`, request.url));
+
+  if (!response.ok) {
+    throw new Error(`Local feed ${feed.id}.xml not found (HTTP ${response.status})`);
+  }
+
+  return response.text();
+}
+
+/**
+ * Fetches a feed from its remote site.
+ *
+ * @param {{ name: string, url: string }} feed
+ * @returns {Promise<string>}
+ */
+async function fetchRemoteFeed(feed) {
+  const response = await fetch(feed.url, FEED_REQUEST_INIT);
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} ${response.statusText}`.trim());
   }
 
-  return { ...feed, items: parseRssItems(await response.text()) };
-}
-
-/**
- * Uses the local feed cache when FEED_BASE_URL is set, otherwise the remote feed.
- *
- * @param {{ id: string, url: string }} feed
- * @param {string} baseUrl
- * @returns {string}
- */
-function feedUrl(feed, baseUrl) {
-  return baseUrl ? `${baseUrl.replace(/\/$/, '')}/${feed.id}.xml` : feed.url;
+  return response.text();
 }
 
 /**
@@ -229,10 +251,9 @@ function renderPage(feeds) {
 </html>`;
 }
 
-async function handleRequest(_request, env = {}) {
-  const baseUrl = env.FEED_BASE_URL ?? '';
+async function handleRequest(request, env = {}) {
   const results = await Promise.allSettled(
-    FEEDS.map((feed) => loadFeed(feed, feedUrl(feed, baseUrl))),
+    FEEDS.map((feed) => loadFeed(feed, env, request)),
   );
 
   const feeds = results.map((result, index) =>

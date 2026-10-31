@@ -1,0 +1,9 @@
+name = "hinews-cf"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Local development reads downloaded feeds through this static assets binding.
+# Production uses wrangler.toml, which has no assets binding, so it fetches remotely.
+[assets]
+directory = "./feeds"
+binding = "ASSETS"
