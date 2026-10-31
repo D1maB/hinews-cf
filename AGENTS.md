@@ -96,6 +96,9 @@ All local infrastructure runs in Docker on Alpine:
 
 ## Local development
 
-- `./scripts/compose up --build app` — worker on port `8787`.
+- `./scripts/compose up -d --build app` — build and start the worker in the background
+  on port `8787`.
+- `./scripts/compose logs -f app` — follow the worker logs.
+- `./scripts/compose down` — stop and remove the containers.
 - `./scripts/compose run --rm test` — run the test suite.
 - `./scripts/compose run --rm deploy` — deploy using `CLOUDFLARE_API_TOKEN`.

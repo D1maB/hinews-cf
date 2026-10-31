@@ -32,30 +32,41 @@ credentials are never hardcoded in the compose file. Commit only `.env.example`.
 
 The app runs entirely in Docker, so you do not need Node.js installed on the host.
 
-1. From the repository root, build the image and start the worker:
+1. From the repository root, build the image and start the worker in the background:
 
    ```bash
-   ./scripts/compose up --build app
+   ./scripts/compose up -d --build app
    ```
 
    The first run builds the Alpine image and installs dependencies; later runs reuse
    the cached layers.
 
-2. Open <http://localhost:8787>. The page and the terminal running the container both
-   show:
+2. Open <http://localhost:8787>. The page shows:
 
    ```
    Hello World
    ```
 
-3. Stop the worker with `Ctrl+C`.
+3. Follow the worker logs when needed:
+
+   ```bash
+   ./scripts/compose logs -f app
+   ```
+
+4. Stop and remove the container:
+
+   ```bash
+   ./scripts/compose down
+   ```
 
 Source files are mounted into the container, so edits reload automatically. The helper
 prefers `docker-compose` and falls back to `docker compose`, always using the root
-`docker-compose.yml`. The equivalent plain Docker command is:
+`docker-compose.yml`. The equivalent plain Docker commands are:
 
 ```bash
-docker-compose up --build app
+docker-compose up -d --build app
+docker-compose logs -f app
+docker-compose down
 ```
 
 `.env` is not needed for local development; it is only required for deployment.
