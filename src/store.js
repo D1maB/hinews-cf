@@ -136,6 +136,29 @@ export async function getLastScheduledAt(db) {
   return values.reduce((latest, value) => (value > latest ? value : latest));
 }
 
+/**
+ * Returns scheduled items whose scheduled time has passed.
+ *
+ * @param {D1Database} db
+ * @returns {Promise<Array<{ feed_id: string, feed_name: string, title: string, url: string, published_at: string | null, score: number | null, status: string | null, scheduled_at: string | null }>>}
+ */
+export async function getDueItems(db) {
+  const items = await listItems(db);
+  const now = new Date().toISOString();
+  return items.filter((item) => item.status === 'scheduled' && item.scheduled_at && item.scheduled_at <= now);
+}
+
+/**
+ * Marks an item as published to social.
+ *
+ * @param {D1Database} db
+ * @param {string} url
+ * @returns {Promise<void>}
+ */
+export async function markPublished(db, url) {
+  await db.prepare("UPDATE items SET status = 'published' WHERE url = ?").bind(url).run();
+}
+
 const SELECT_UNSCORED = `
   SELECT url, title
   FROM items

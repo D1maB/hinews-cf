@@ -1,4 +1,5 @@
 import { ingestFeeds } from './ingest.js';
+import { publishScheduled } from './publish.js';
 import { backfillScores, getLastSync, listItems } from './store.js';
 import { groupItems } from './group.js';
 import { renderPage } from './render.js';
@@ -36,8 +37,14 @@ async function handleRequest(_request, env) {
  * @param {Record<string, unknown>} env
  * @param {ExecutionContext} ctx
  */
-function handleScheduled(_controller, env, ctx) {
-  ctx.waitUntil(ingestFeeds(env));
+function handleScheduled(controller, env, ctx) {
+  const cron = controller?.cron ?? '';
+
+  if (cron === '* * * * *') {
+    ctx.waitUntil(publishScheduled(env));
+  } else {
+    ctx.waitUntil(ingestFeeds(env));
+  }
 }
 
 export default {

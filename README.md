@@ -96,7 +96,7 @@ Parsed items are stored in D1 (`items` table, defined in `migrations/`). The `ur
 is unique, so the same story is never inserted twice even though feeds are polled
 repeatedly. The page reads all rows from the database, newest first, grouped by feed.
 
-A cron trigger (`0 */12 * * *`) runs the parser every 12 hours in production. Locally,
+Cron triggers run publishing every minute and ingestion every 12 hours in production. Locally,
 `wrangler dev --test-scheduled` exposes the same handler at `/__scheduled`.
 
 Local migrations are applied automatically when the `app` service starts. Applied data
