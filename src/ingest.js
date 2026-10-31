@@ -30,7 +30,7 @@ export async function ingestFeeds(env) {
     })),
   );
 
-  const prepared = dedupItems(items).filter((item) => item.score > MIN_SCORE);
+  const prepared = dedupItems(items).filter((item) => item.score >= MIN_SCORE);
   const inserted = await saveItems(env.DB, prepared);
 
   await setLastSync(env.DB, new Date().toISOString());

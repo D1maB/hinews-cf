@@ -80,7 +80,7 @@ class FakeStatement {
 
       const threshold = this.args[0];
       for (const [url, row] of [...this.database.rows.entries()]) {
-        if (row.score != null && row.score <= threshold) {
+        if (row.score != null && row.score < threshold) {
           this.database.rows.delete(url);
         }
       }
