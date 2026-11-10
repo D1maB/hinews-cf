@@ -1,5 +1,5 @@
 /**
- * Compares scheduled times, newest first; undated items go last.
+ * Compares scheduled times, oldest first; undated items go last.
  *
  * @param {{ scheduled_at: string | null }} left
  * @param {{ scheduled_at: string | null }} right
@@ -18,11 +18,11 @@ export function compareByScheduled(left, right) {
     return -1;
   }
 
-  return right.scheduled_at.localeCompare(left.scheduled_at);
+  return left.scheduled_at.localeCompare(right.scheduled_at);
 }
 
 /**
- * Flattens stored rows into a single list sorted by scheduled time, newest first.
+ * Flattens stored rows into a single list sorted by scheduled time, oldest first.
  *
  * @param {Array<Record<string, unknown>>} items
  * @returns {Array<Record<string, unknown>>}

@@ -88,11 +88,11 @@ test('renders all stored items in a single list with source notes sorted by sche
 
   const items = [...html.matchAll(/<li>[\s\S]*?<\/li>/g)].map((match) => match[0]);
   assert.equal(items.length, 2);
-  assert.match(items[0], /KitGuru story/);
-  assert.match(items[0], /Source: KitGuru/);
-  assert.match(items[1], /Source: Wccftech/);
-  assert.match(items[1], /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.match(items[0], /Source: Wccftech/);
+  assert.match(items[0], /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
   assert.ok(!html.includes('<script>alert(1)</script>'));
+  assert.match(items[1], /KitGuru story/);
+  assert.match(items[1], /Source: KitGuru/);
 });
 
 test('seeds the database on the first request and reuses it afterwards', async (t) => {
