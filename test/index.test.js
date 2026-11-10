@@ -71,6 +71,7 @@ test('renders all stored items in a single list with source notes sorted by sche
       url: 'https://example.com/unsafe',
       published_at: '2024-01-02T00:00:00.000Z',
       scheduled_at: '2026-11-02T10:00:00.000Z',
+      status: 'scheduled',
     },
     {
       feed_id: 'kitguru',
@@ -79,6 +80,7 @@ test('renders all stored items in a single list with source notes sorted by sche
       url: 'https://example.com/kitguru',
       published_at: '2024-01-01T00:00:00.000Z',
       scheduled_at: '2026-11-02T12:34:00.000Z',
+      status: 'scheduled',
     },
   ]);
 
@@ -89,10 +91,12 @@ test('renders all stored items in a single list with source notes sorted by sche
   const items = [...html.matchAll(/<li>[\s\S]*?<\/li>/g)].map((match) => match[0]);
   assert.equal(items.length, 2);
   assert.match(items[0], /Source: Wccftech/);
+  assert.match(items[0], /Status: scheduled/);
   assert.match(items[0], /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
   assert.ok(!html.includes('<script>alert(1)</script>'));
   assert.match(items[1], /KitGuru story/);
   assert.match(items[1], /Source: KitGuru/);
+  assert.match(items[1], /Status: scheduled/);
 });
 
 test('seeds the database on the first request and reuses it afterwards', async (t) => {

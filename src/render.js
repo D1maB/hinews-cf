@@ -66,7 +66,7 @@ export function formatSyncDate(value) {
 }
 
 /**
- * @param {{ title: string, url: string, published_at: string | null, score?: number | null, scheduled_at?: string | null }} item
+ * @param {{ title: string, url: string, published_at: string | null, score?: number | null, scheduled_at?: string | null, status?: string }} item
  * @returns {string}
  */
 export function renderItem(item) {
@@ -79,11 +79,13 @@ export function renderItem(item) {
   const scheduled = scheduledAt ? `<time class="scheduled">Scheduled: ${escapeHtml(scheduledAt)}</time>` : '';
 
   const source = item.feed_name ? `<div class="source">Source: ${escapeHtml(item.feed_name)}</div>` : '';
+  const status = item.status ? `<div class="status">Status: ${escapeHtml(item.status)}</div>` : '';
 
   return `<li>
   <a href="${escapeHtml(safeUrl(item.url))}">${escapeHtml(item.title)}</a>
   <div class="meta">${score}${time}${scheduled}</div>
   ${source}
+  ${status}
 </li>`;
 }
 
@@ -152,6 +154,7 @@ export function renderPage(feeds, total, lastSync = null, items = []) {
     li a:hover { color: var(--accent); }
     .meta { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; }
     .source { margin-top: 0.25rem; color: var(--muted); font-size: 0.75rem; }
+    .status { margin-top: 0.25rem; color: var(--muted); font-size: 0.75rem; }
     .score {
       display: inline-block;
       padding: 0.15rem 0.55rem;
