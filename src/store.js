@@ -183,23 +183,6 @@ const SELECT_UNSCORED = `
 
 const CLEAR_ITEMS = 'DELETE FROM items';
 
-const LIST_FEEDS = `
-  SELECT id, name, url
-  FROM feeds
-  ORDER BY id
-`;
-
-const INSERT_FEED = `
-  INSERT OR IGNORE INTO feeds (id, name, url)
-  VALUES (?, ?, ?)
-`;
-
-const UPDATE_FEED = `
-  UPDATE feeds
-  SET name = ?, url = ?
-  WHERE id = ?
-`;
-
 const UPDATE_SCORE = `
   UPDATE items
   SET score = ?
@@ -214,74 +197,6 @@ const UPDATE_SCORE = `
  */
 export async function clearItems(db) {
   await db.prepare(CLEAR_ITEMS).run();
-}
-
-/**
- * Lists every stored feed.
- *
- * @param {D1Database} db
- * @returns {Promise<Array<{ id: string, name: string, url: string }>>
- */
-export async function listFeeds(db) {
-  const { results = [] } = await db.prepare(LIST_FEEDS).all();
-
-  return results;
-}
-
-/**
- * Creates a new feed.
- *
- * @param {D1Database} db
- * @param {{ id: string, name: string, url: string }} feed
- * @returns {Promise<void>}
- */
-export async function createFeed(db, feed) {
-  await db.prepare(INSERT_FEED).bind(feed.id, feed.name, feed.url).run();
-}
-
-/**
- * Updates an existing feed.
- *
- * @param {D1Database} db
- * @param {string} id
- * @param {{ name: string, url: string }} feed
- * @returns {Promise<void>}
- */
-export async function updateFeed(db, id, feed) {
-  await db.prepare(UPDATE_FEED).bind(feed.name, feed.url, id).run();
-}
-
-/**
- * Removes a feed.
- *
- * @param {D1Database} db
- * @param {string} id
- * @returns {Promise<void>}
- */
-export async function deleteFeed(db, id) {
-  await db.prepare('DELETE FROM feeds WHERE id = ?').bind(id).run();
-}
-
-/**
- * Creates a new stored item.
- *
- * @param {D1Database} db
- * @param {{ feedId: string, feedName: string, title: string, url: string, publishedAt: string | null, score: number | null, scheduledAt?: string }} item
- * @returns {Promise<void>}
- */
-export async function createItem(db, item) {
-  await db.prepare(INSERT_ITEM).bind(item.feedId, item.feedName, item.title, item.url, item.publishedAt, item.score, item.scheduledAt ?? new Date().toISOString()).run();
-}
-
-/**
- * Removes a stored item by its URL.
- *
- * @param {D1Database} db
- * @param {string} url
- * @returns {Promise<void>}
- */
-export async function deleteItem(db, url) {
-  await db.prepare('DELETE FROM items WHERE url = ?').bind(url).run();
 }
 
 /**
