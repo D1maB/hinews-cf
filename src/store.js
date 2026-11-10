@@ -1,7 +1,7 @@
 import { normalizeTitle } from './dedup.js';
 import { scoreTitle, MIN_SCORE } from './score.js';
 
-const SCHEDULE_BUCKET_MINUTES = 7;
+const SCHEDULE_WINDOW_MINUTES = 12 * 60;
 
 const INSERT_ITEM = `
   INSERT OR IGNORE INTO items (feed_id, feed_name, title, url, published_at, score, status, scheduled_at)
@@ -162,17 +162,18 @@ export async function markPublished(db, url) {
 }
 
 /**
- * Computes the scheduled time for the item at the given bucket index, anchored at baseTime.
+ * Computes the scheduled time for the item at the given index, spreading the
+ * items evenly across a single 12 hour window starting at baseTime.
  *
  * @param {number} baseTime
  * @param {number} index
+ * @param {number} itemCount
  * @returns {string}
  */
-export function buildScheduledAt(baseTime, index) {
-  const bucketStart = index * SCHEDULE_BUCKET_MINUTES + 1;
-  const bucketEnd = (index + 1) * SCHEDULE_BUCKET_MINUTES;
-  const randomMinutes = bucketStart + Math.floor(Math.random() * (bucketEnd - bucketStart + 1));
-  return new Date(baseTime + randomMinutes * 60 * 1000).toISOString();
+export function buildScheduledAt(baseTime, index, itemCount) {
+  const slotMinutes = itemCount > 0 ? SCHEDULE_WINDOW_MINUTES / itemCount : 0;
+  const scheduledTime = new Date(baseTime + (index + 1) * slotMinutes * 60 * 1000);
+  return scheduledTime.toISOString();
 }
 
 const SELECT_UNSCORED = `
@@ -224,7 +225,7 @@ export async function backfillScores(db) {
   const last = await getLastScheduledAt(db);
   const baseTime = last ? new Date(last).getTime() : Date.now();
   for (let index = 0; index < unscheduled.length; index += 1) {
-    const scheduledAt = buildScheduledAt(baseTime, index);
+    const scheduledAt = buildScheduledAt(baseTime, index, unscheduled.length);
     await db.prepare("UPDATE items SET scheduled_at = ? WHERE url = ?").bind(scheduledAt, unscheduled[index].url).run();
   }
 }

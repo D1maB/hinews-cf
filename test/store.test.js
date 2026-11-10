@@ -6,7 +6,6 @@ import { createFakeDb } from './fake-db.js';
 
 test('schedules unscheduled items across one 12 hour window from the last scheduled time', async (t) => {
   t.mock.method(console, 'log', () => {});
-  t.mock.method(Math, 'random', () => 0.5);
   const db = createFakeDb([
     {
       feed_id: 'kitguru',
@@ -43,8 +42,8 @@ test('schedules unscheduled items across one 12 hour window from the last schedu
   const first = db.rows.get('https://example.com/aaa');
   const second = db.rows.get('https://example.com/bbb');
 
-  assert.equal(first.scheduled_at, '2026-11-02T12:04:00.000Z');
-  assert.equal(second.scheduled_at, '2026-11-02T12:11:00.000Z');
+  assert.equal(first.scheduled_at, '2026-11-02T18:00:00.000Z');
+  assert.equal(second.scheduled_at, '2026-11-03T00:00:00.000Z');
 });
 
 test('clears all stored items', async (t) => {

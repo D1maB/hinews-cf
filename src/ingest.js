@@ -36,7 +36,7 @@ export async function ingestFeeds(env) {
   const baseTime = lastScheduledAt ? new Date(lastScheduledAt).getTime() : Date.now();
   const prepared = deduped.map((item, index) => ({
     ...item,
-    scheduledAt: buildScheduledAt(baseTime, index),
+    scheduledAt: buildScheduledAt(baseTime, index, deduped.length),
   }));
 
   const inserted = await saveItems(env.DB, prepared);
