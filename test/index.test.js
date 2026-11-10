@@ -158,3 +158,83 @@ test('scheduled runs clear stored items before ingesting fresh news', async (t) 
 
   assert.equal(db.rows.size, FEEDS.length);
 });
+
+test('admin api login validates the token', async () => {
+  const okResponse = await worker.fetch(
+    new Request('https://example.com/api/login', { method: 'POST', body: JSON.stringify({ token: 'test-token' }) }),
+    { ADMIN_TOKEN: 'test-token' },
+  );
+  assert.equal(okResponse.status, 200);
+
+  const badResponse = await worker.fetch(
+    new Request('https://example.com/api/login', { method: 'POST', body: JSON.stringify({ token: 'wrong' }) }),
+    { ADMIN_TOKEN: 'test-token' },
+  );
+  assert.equal(badResponse.status, 401);
+});
+
+test('admin api rejects unauthenticated feed requests', async () => {
+  const response = await worker.fetch(new Request('https://example.com/api/feeds'), { DB: createFakeDb(), ADMIN_TOKEN: 'test-token' });
+
+  assert.equal(response.status, 401);
+});
+
+test('admin api lists stored feeds when authorized', async () => {
+  const db = createFakeDb();
+  db.rows.set('testfeed', { id: 'testfeed', feed_id: 'testfeed', feed_name: 'Test Feed', title: '', url: 'https://example.com/feed', published_at: null, score: null, status: 'scheduled', scheduled_at: null });
+  const env = { DB: db, ADMIN_TOKEN: 'test-token' };
+  const response = await worker.fetch(new Request('https://example.com/api/feeds', { headers: { 'x-admin-token': 'test-token' } }), env);
+
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.equal(data.feeds.length, 1);
+  assert.equal(data.feeds[0].id, 'testfeed');
+});
+
+test('admin api creates and deletes feeds', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const db = createFakeDb();
+  const env = { DB: db, ADMIN_TOKEN: 'test-token' };
+  const headers = { 'x-admin-token': 'test-token', 'content-type': 'application/json' };
+
+  const createResponse = await worker.fetch(
+    new Request('https://example.com/api/feeds', { method: 'POST', headers, body: JSON.stringify({ id: 'newfeed', name: 'New Feed', url: 'https://example.com/new' }) }),
+    env,
+  );
+  assert.equal(createResponse.status, 200);
+
+  const listResponse = await worker.fetch(new Request('https://example.com/api/feeds', { headers }), env);
+  const listData = await listResponse.json();
+  assert.ok(listData.feeds.some((feed) => feed.id === 'newfeed'));
+
+  const deleteResponse = await worker.fetch(new Request('https://example.com/api/feeds/newfeed', { method: 'DELETE', headers }), env);
+  assert.equal(deleteResponse.status, 200);
+
+  const afterDeleteResponse = await worker.fetch(new Request('https://example.com/api/feeds', { headers }), env);
+  const afterDeleteData = await afterDeleteResponse.json();
+  assert.ok(!afterDeleteData.feeds.some((feed) => feed.id === 'newfeed'));
+});
+
+test('admin api creates and deletes items', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const db = createFakeDb();
+  const env = { DB: db, ADMIN_TOKEN: 'test-token' };
+  const headers = { 'x-admin-token': 'test-token', 'content-type': 'application/json' };
+
+  const createResponse = await worker.fetch(
+    new Request('https://example.com/api/items', { method: 'POST', headers, body: JSON.stringify({ feedId: 'kitguru', feedName: 'KitGuru', title: 'KitGuru pc gpu benchmark', url: 'https://example.com/story', publishedAt: '2024-01-01T00:00:00.000Z', score: 60 }) }),
+    env,
+  );
+  assert.equal(createResponse.status, 200);
+
+  const listResponse = await worker.fetch(new Request('https://example.com/api/items', { headers }), env);
+  const listData = await listResponse.json();
+  assert.ok(listData.items.some((item) => item.url === 'https://example.com/story'));
+
+  const deleteResponse = await worker.fetch(new Request('https://example.com/api/items?url=' + encodeURIComponent('https://example.com/story'), { method: 'DELETE', headers }), env);
+  assert.equal(deleteResponse.status, 200);
+
+  const afterDeleteResponse = await worker.fetch(new Request('https://example.com/api/items', { headers }), env);
+  const afterDeleteData = await afterDeleteResponse.json();
+  assert.ok(!afterDeleteData.items.some((item) => item.url === 'https://example.com/story'));
+});

@@ -84,6 +84,12 @@ class FakeStatement {
         }
         return { meta: { changes: 0 } };
       }
+      if (sql.includes('url')) {
+        const url = this.args[0];
+        this.database.rows.delete(url);
+        this.database.writes += 1;
+        return { meta: { changes: 1 } };
+      }
 
       const threshold = this.args[0];
       for (const [url, row] of [...this.database.rows.entries()]) {
@@ -133,6 +139,16 @@ class FakeStatement {
         this.database.writes += 1;
       }
       return { meta: { changes: row ? 1 : 0 } };
+    }
+
+    if (this.sql.toLowerCase().includes('insert or ignore into feeds')) {
+      const [id, name, url] = this.args;
+      if (!this.database.rows.has(id)) {
+        this.database.rows.set(id, { id, feed_id: id, feed_name: name, title: '', url, published_at: null, score: null, status: 'scheduled', scheduled_at: null });
+        this.database.writes += 1;
+        return { meta: { changes: 1 } };
+      }
+      return { meta: { changes: 0 } };
     }
 
     if (!this.sql.includes(INSERT_SQL)) {

@@ -115,6 +115,27 @@ docker-compose run --rm test
 The tests use mocked feeds and an in-memory D1 stand-in. They cover parsing, storage,
 URL deduplication, scheduled ingestion, full database rendering, and failing feeds.
 
+## Admin
+
+The worker exposes a token protected admin API under `/api`:
+
+| Method | Path | Purpose |
+| ------ | ---- | ------- |
+| POST | `/api/login` | Validates the admin token |
+| GET | `/api/feeds` | Lists stored feeds |
+| POST | `/api/feeds` | Creates a feed |
+| PUT | `/api/feeds/:id` | Updates a feed |
+| DELETE | `/api/feeds/:id` | Deletes a feed |
+| GET | `/api/items` | Lists stored items |
+| POST | `/api/items` | Creates a stored item |
+| DELETE | `/api/items?url=...` | Deletes a stored item |
+
+The admin panel is a small Vue 3 app served at `/admin`. It asks for the admin
+token, then manages feeds and items through the API.
+
+Local development uses the `local-admin-token` value configured in
+`wrangler.dev.toml`.
+
 ## Deployment
 
 1. Create the D1 database (once):
