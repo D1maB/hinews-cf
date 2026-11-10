@@ -1,6 +1,8 @@
 import { normalizeTitle } from './dedup.js';
 import { scoreTitle, MIN_SCORE } from './score.js';
 
+const SCHEDULE_BUCKET_MINUTES = 7;
+
 const INSERT_ITEM = `
   INSERT OR IGNORE INTO items (feed_id, feed_name, title, url, published_at, score, status, scheduled_at)
   VALUES (?, ?, ?, ?, ?, ?, 'scheduled', ?)
@@ -159,11 +161,27 @@ export async function markPublished(db, url) {
   await db.prepare("UPDATE items SET status = 'published' WHERE url = ?").bind(url).run();
 }
 
+/**
+ * Computes the scheduled time for the item at the given bucket index, anchored at baseTime.
+ *
+ * @param {number} baseTime
+ * @param {number} index
+ * @returns {string}
+ */
+export function buildScheduledAt(baseTime, index) {
+  const bucketStart = index * SCHEDULE_BUCKET_MINUTES + 1;
+  const bucketEnd = (index + 1) * SCHEDULE_BUCKET_MINUTES;
+  const randomMinutes = bucketStart + Math.floor(Math.random() * (bucketEnd - bucketStart + 1));
+  return new Date(baseTime + randomMinutes * 60 * 1000).toISOString();
+}
+
 const SELECT_UNSCORED = `
   SELECT url, title
   FROM items
   WHERE score IS NULL
 `;
+
+const CLEAR_ITEMS = 'DELETE FROM items';
 
 const UPDATE_SCORE = `
   UPDATE items
@@ -172,7 +190,20 @@ const UPDATE_SCORE = `
 `;
 
 /**
- * Backfills scores for rows that were stored before scoring existed.
+ * Removes every stored item, so the next ingestion run starts from a clean slate.
+ *
+ * @param {D1Database} db
+ * @returns {Promise<void>}
+ */
+export async function clearItems(db) {
+  await db.prepare(CLEAR_ITEMS).run();
+}
+
+/**
+ * Backfills scores for rows that were stored before scoring existed, then
+ * schedules every unscheduled item across a single 12-hour window. Items pick
+ * a random minute from sequential buckets (1-7, 8-15, 16-23, ...) anchored at
+ * the last scheduled time, so publishing happens at the scheduled moment.
  *
  * @param {D1Database} db
  * @returns {Promise<void>}
@@ -190,14 +221,10 @@ export async function backfillScores(db) {
 
   const { results: allRows = [] } = await db.prepare('SELECT url, scheduled_at FROM items').all();
   const unscheduled = allRows.filter((row) => !row.scheduled_at);
-  let last = await getLastScheduledAt(db);
-  for (const row of unscheduled) {
-    const baseTime = last ? new Date(last).getTime() : Date.now();
-    const randomMinutes = 10 + Math.floor(Math.random() * 16);
-    const intervalMinutes = 20 + randomMinutes;
-    const next = new Date(baseTime + intervalMinutes * 60 * 1000);
-    const scheduledAt = next.toISOString();
-    await db.prepare("UPDATE items SET scheduled_at = ? WHERE url = ?").bind(scheduledAt, row.url).run();
-    last = scheduledAt;
+  const last = await getLastScheduledAt(db);
+  const baseTime = last ? new Date(last).getTime() : Date.now();
+  for (let index = 0; index < unscheduled.length; index += 1) {
+    const scheduledAt = buildScheduledAt(baseTime, index);
+    await db.prepare("UPDATE items SET scheduled_at = ? WHERE url = ?").bind(scheduledAt, unscheduled[index].url).run();
   }
 }

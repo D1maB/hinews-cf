@@ -45,7 +45,28 @@ export function formatDate(value) {
 }
 
 /**
- * @param {{ title: string, url: string, published_at: string | null, score?: number | null }} item
+ * Formats an ISO timestamp as `D Month YYYY HH:mm`.
+ *
+ * @param {string | null} value
+ * @returns {string}
+ */
+export function formatSyncDate(value) {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  const monthName = date.toLocaleDateString('en-US', { month: 'long' });
+  const pad = (num) => String(num).padStart(2, '0');
+  return `${date.getDate()} ${monthName} ${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/**
+ * @param {{ title: string, url: string, published_at: string | null, score?: number | null, scheduled_at?: string | null }} item
  * @returns {string}
  */
 export function renderItem(item) {
@@ -54,36 +75,27 @@ export function renderItem(item) {
   const scoreClass = scoreValue == null ? '' : scoreValue >= 80 ? ' high' : scoreValue >= 60 ? ' mid' : '';
   const score = scoreValue != null ? `<span class="score${scoreClass}">${escapeHtml(String(scoreValue))}</span>` : '';
   const time = published ? `<time>${escapeHtml(published)}</time>` : '';
-  const scheduled = item.scheduled_at ? `<time class="scheduled">Scheduled: ${escapeHtml(item.scheduled_at)}</time>` : '';
+  const scheduledAt = formatSyncDate(item.scheduled_at);
+  const scheduled = scheduledAt ? `<time class="scheduled">Scheduled: ${escapeHtml(scheduledAt)}</time>` : '';
+
+  const source = item.feed_name ? `<div class="source">Source: ${escapeHtml(item.feed_name)}</div>` : '';
 
   return `<li>
   <a href="${escapeHtml(safeUrl(item.url))}">${escapeHtml(item.title)}</a>
   <div class="meta">${score}${time}${scheduled}</div>
+  ${source}
 </li>`;
 }
 
 /**
- * @param {{ name: string, url: string, items: Array<{ title: string, url: string, published_at: string | null }> }} feed
- * @returns {string}
- */
-export function renderFeed(feed) {
-  const items = feed.items.length
-    ? `<ul>${feed.items.map(renderItem).join('')}</ul>`
-    : '<p class="empty">No stored items yet.</p>';
-
-  return `<section class="feed">
-  <h2><a href="${escapeHtml(safeUrl(feed.url))}">${escapeHtml(feed.name)}</a></h2>
-  ${items}
-</section>`;
-}
-
-/**
- * @param {Array<{ name: string, url: string, items: Array<{ title: string, url: string, published_at: string | null }> }>} feeds
+ * @param {Array<{ name: string, url: string }>} feeds
  * @param {number} total
  * @param {string | null} [lastSync]
+ * @param {Array<Record<string, unknown>>} [items]
  * @returns {string}
  */
-export function renderPage(feeds, total, lastSync = null) {
+export function renderPage(feeds, total, lastSync = null, items = []) {
+  const list = items.length > 0 ? `<ul class="items">${items.map((item) => renderItem(item)).join('')}</ul>` : '<p class="empty">No stored items yet.</p>';
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -128,17 +140,7 @@ export function renderPage(feeds, total, lastSync = null) {
     h1 { margin: 0 0 0.25rem; font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
     .subtitle { margin: 0; color: var(--muted); font-size: 0.95rem; }
     .sync { margin: 0.5rem 0 0; color: var(--muted); font-size: 0.8rem; }
-    .feeds { display: flex; flex-direction: column; gap: 1.5rem; }
-    .feed {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 0.75rem;
-      padding: 1.25rem 1.5rem;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-    }
-    .feed h2 { margin: 0 0 0.75rem; font-size: 1.1rem; font-weight: 600; }
-    .feed h2 a { color: var(--accent); text-decoration: none; }
-    .feed h2 a:hover { text-decoration: underline; }
+    .list { display: flex; flex-direction: column; gap: 0.75rem; }
     ul { list-style: none; padding: 0; margin: 0; }
     li {
       padding: 0.6rem 0.75rem;
@@ -149,6 +151,7 @@ export function renderPage(feeds, total, lastSync = null) {
     li a { color: var(--text); text-decoration: none; font-weight: 500; }
     li a:hover { color: var(--accent); }
     .meta { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; }
+    .source { margin-top: 0.25rem; color: var(--muted); font-size: 0.75rem; }
     .score {
       display: inline-block;
       padding: 0.15rem 0.55rem;
@@ -173,10 +176,10 @@ export function renderPage(feeds, total, lastSync = null) {
     <header>
       <h1>News</h1>
       <p class="subtitle">${total} stored headline${total === 1 ? '' : 's'} from ${feeds.length} RSS feeds.</p>
-      <p class="sync">Last sync: ${escapeHtml(lastSync ?? 'never')}</p>
+      <p class="sync">Last sync: ${escapeHtml(formatSyncDate(lastSync) || 'never')}</p>
     </header>
-    <main class="feeds">
-      ${feeds.map(renderFeed).join('\n    ')}
+    <main class="list">
+      ${list}
     </main>
   </div>
 </body>

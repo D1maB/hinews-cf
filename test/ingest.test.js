@@ -92,3 +92,16 @@ test('stores available feeds when one feed fails', async (t) => {
   assert.equal(inserted, FEEDS.length - 1);
   assert.equal(db.rows.size, FEEDS.length - 1);
 });
+
+test('schedules ingested items within one 12 hour window', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const db = createFakeDb();
+  const { inserted } = await ingestFeeds({ ...localEnv(), DB: db });
+
+  assert.equal(inserted, FEEDS.length);
+
+  const times = [...db.rows.values()].map((row) => new Date(row.scheduled_at).getTime());
+  assert.equal(times.length, FEEDS.length);
+  const spread = Math.max(...times) - Math.min(...times);
+  assert.ok(spread < 12 * 60 * 60 * 1000);
+});

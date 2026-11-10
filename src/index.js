@@ -1,7 +1,7 @@
 import { ingestFeeds } from './ingest.js';
 import { publishScheduled } from './publish.js';
-import { backfillScores, getLastSync, listItems } from './store.js';
-import { groupItems } from './group.js';
+import { backfillScores, clearItems, getLastSync, listItems } from './store.js';
+import { sortByScheduled } from './group.js';
 import { renderPage } from './render.js';
 import { getFeeds } from './feeds.js';
 
@@ -25,7 +25,9 @@ async function handleRequest(_request, env) {
 
   const lastSync = await getLastSync(env.DB);
 
-  return new Response(renderPage(groupItems(items, feeds), items.length, lastSync), {
+  const allItems = sortByScheduled(items);
+
+  return new Response(renderPage(feeds, items.length, lastSync, allItems), {
     headers: { 'content-type': 'text/html;charset=UTF-8' },
   });
 }
@@ -45,7 +47,7 @@ function handleScheduled(controller, env, ctx) {
       ctx.waitUntil(publishScheduled(env));
       break;
     default:
-      ctx.waitUntil(ingestFeeds(env));
+      ctx.waitUntil(clearItems(env.DB).then(() => ingestFeeds(env)));
       break;
   }
 }

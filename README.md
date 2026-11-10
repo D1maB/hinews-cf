@@ -5,7 +5,7 @@ RSS feeds, parses them, stores new headlines in a D1 database, and
 renders every stored item.
 
 Local development reads feeds downloaded into local storage; production fetches them
-from the remote sites. A cron trigger refreshes the database every 12 hours.
+from the remote sites. A cron trigger clears the database and refreshes it every 12 hours.
 
 Everything — development, tests, and deployment — runs in Docker on Alpine. Docker is
 the only supported runtime; no Node.js, Wrangler, or test runner is installed or run on
@@ -94,7 +94,9 @@ the worker fetches the remote URLs configured for each feed.
 
 Parsed items are stored in D1 (`items` table, defined in `migrations/`). The `url` column
 is unique, so the same story is never inserted twice even though feeds are polled
-repeatedly. The page reads all rows from the database, newest first, grouped by feed.
+repeatedly. The page reads all rows from the database, newest first by scheduled time, and renders them as a single list with a source note per item.
+
+On every scheduled ingestion run the worker clears the `items` table before re-ingesting, and newly scheduled items are spread across a single 12-hour window using sequential random minute buckets.
 
 Cron triggers run publishing every minute and ingestion every 12 hours in production. Locally,
 `wrangler dev --test-scheduled` exposes the same handler at `/__scheduled`.

@@ -1,6 +1,6 @@
 import { loadFeeds, toIsoDate } from './feeds.js';
 import { MIN_SCORE } from './score.js';
-import { saveItems, setLastSync, getLastScheduledAt } from './store.js';
+import { saveItems, setLastSync, getLastScheduledAt, buildScheduledAt } from './store.js';
 import { dedupItems } from './dedup.js';
 
 /**
@@ -32,16 +32,12 @@ export async function ingestFeeds(env) {
 
   const deduped = dedupItems(items).filter((item) => item.score > MIN_SCORE);
 
-  let lastScheduledAt = await getLastScheduledAt(env.DB);
-  const prepared = deduped.map((item) => {
-    const baseTime = lastScheduledAt ? new Date(lastScheduledAt).getTime() : Date.now();
-    const randomMinutes = 10 + Math.floor(Math.random() * 16);
-    const intervalMinutes = 20 + randomMinutes;
-    const next = new Date(baseTime + intervalMinutes * 60 * 1000);
-    const scheduledAt = next.toISOString();
-    lastScheduledAt = scheduledAt;
-    return { ...item, scheduledAt };
-  });
+  const lastScheduledAt = await getLastScheduledAt(env.DB);
+  const baseTime = lastScheduledAt ? new Date(lastScheduledAt).getTime() : Date.now();
+  const prepared = deduped.map((item, index) => ({
+    ...item,
+    scheduledAt: buildScheduledAt(baseTime, index),
+  }));
 
   const inserted = await saveItems(env.DB, prepared);
 

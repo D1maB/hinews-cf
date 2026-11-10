@@ -62,7 +62,7 @@ test('renders every stored item from the database', async () => {
   }
 });
 
-test('groups stored items under their feed and escapes markup', async () => {
+test('renders all stored items in a single list with source notes sorted by scheduled time', async () => {
   const db = createFakeDb([
     {
       feed_id: 'wccftech',
@@ -70,6 +70,7 @@ test('groups stored items under their feed and escapes markup', async () => {
       title: '<script>alert(1)</script>',
       url: 'https://example.com/unsafe',
       published_at: '2024-01-02T00:00:00.000Z',
+      scheduled_at: '2026-11-02T10:00:00.000Z',
     },
     {
       feed_id: 'kitguru',
@@ -77,21 +78,21 @@ test('groups stored items under their feed and escapes markup', async () => {
       title: 'KitGuru story',
       url: 'https://example.com/kitguru',
       published_at: '2024-01-01T00:00:00.000Z',
+      scheduled_at: '2026-11-02T12:34:00.000Z',
     },
   ]);
 
   const html = await (await worker.fetch(REQUEST, { DB: db })).text();
 
-  assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.doesNotMatch(html, /<section class="feed">/);
+
+  const items = [...html.matchAll(/<li>[\s\S]*?<\/li>/g)].map((match) => match[0]);
+  assert.equal(items.length, 2);
+  assert.match(items[0], /KitGuru story/);
+  assert.match(items[0], /Source: KitGuru/);
+  assert.match(items[1], /Source: Wccftech/);
+  assert.match(items[1], /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
   assert.ok(!html.includes('<script>alert(1)</script>'));
-
-  const sections = html.match(/<section class="feed">[\s\S]*?<\/section>/g);
-  const kitGuruSection = sections.find((section) => section.includes('KitGuru'));
-  const wccftechSection = sections.find((section) => section.includes('Wccftech'));
-
-  assert.match(kitGuruSection, /KitGuru story/);
-  assert.doesNotMatch(kitGuruSection, /script/);
-  assert.match(wccftechSection, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
 });
 
 test('seeds the database on the first request and reuses it afterwards', async (t) => {
@@ -106,6 +107,7 @@ test('seeds the database on the first request and reuses it afterwards', async (
   assert.equal(db.rows.size, FEEDS.length);
   assert.match(first, /8 stored headlines/);
   assert.equal(fetchesAfterFirstRequest, FEEDS.length);
+  assert.match(first, /Last sync: \d{1,2} [A-Za-z]+ \d{4} \d{2}:\d{2}/);
 
   await worker.fetch(REQUEST, env);
 
@@ -115,6 +117,34 @@ test('seeds the database on the first request and reuses it afterwards', async (
 test('scheduled runs store fresh items', async (t) => {
   t.mock.method(console, 'log', () => {});
   const db = createFakeDb();
+  const env = { ...localAssets(), DB: db };
+  let pending;
+
+  worker.scheduled({ cron: '0 */12 * * *' }, env, {
+    waitUntil: (promise) => {
+      pending = promise;
+    },
+  });
+
+  await pending;
+
+  assert.equal(db.rows.size, FEEDS.length);
+});
+
+test('scheduled runs clear stored items before ingesting fresh news', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const db = createFakeDb([
+    {
+      feed_id: 'kitguru',
+      feed_name: 'KitGuru',
+      title: 'Old story',
+      url: 'https://example.com/old',
+      published_at: '2024-01-01T00:00:00.000Z',
+      status: 'published',
+      scheduled_at: '2026-11-01T10:00:00.000Z',
+      score: 60,
+    },
+  ]);
   const env = { ...localAssets(), DB: db };
   let pending;
 

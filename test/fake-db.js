@@ -66,7 +66,14 @@ class FakeStatement {
     }
 
     if (this.sql.toLowerCase().includes('delete')) {
-      if (this.sql.toLowerCase().includes('id')) {
+      const sql = this.sql.toLowerCase();
+      if (sql === 'delete from items') {
+        const changes = this.database.rows.size;
+        this.database.rows.clear();
+        this.database.writes += 1;
+        return { meta: { changes } };
+      }
+      if (sql.includes('id')) {
         const [id] = this.args;
         for (const [url, row] of [...this.database.rows.entries()]) {
           if (row.id === id) {
