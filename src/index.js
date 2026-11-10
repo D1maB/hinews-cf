@@ -1,6 +1,6 @@
 import { ingestFeeds } from './ingest.js';
 import { publishScheduled } from './publish.js';
-import { backfillScores, clearItems, getLastSync, listItems } from './store.js';
+import { backfillScores, deletePublished, getLastSync, listItems } from './store.js';
 import { sortByScheduled } from './group.js';
 import { renderPage } from './render.js';
 import { getFeeds } from './feeds.js';
@@ -46,8 +46,11 @@ function handleScheduled(controller, env, ctx) {
     case '* * * * *':
       ctx.waitUntil(publishScheduled(env));
       break;
+    case '0 0 */7 * *':
+      ctx.waitUntil(deletePublished(env.DB));
+      break;
     default:
-      ctx.waitUntil(clearItems(env.DB).then(() => ingestFeeds(env)));
+      ctx.waitUntil(ingestFeeds(env));
       break;
   }
 }

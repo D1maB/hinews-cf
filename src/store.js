@@ -184,6 +184,8 @@ const SELECT_UNSCORED = `
 
 const CLEAR_ITEMS = 'DELETE FROM items';
 
+const DELETE_PUBLISHED = "DELETE FROM items WHERE status = 'published'";
+
 const UPDATE_SCORE = `
   UPDATE items
   SET score = ?
@@ -198,6 +200,17 @@ const UPDATE_SCORE = `
  */
 export async function clearItems(db) {
   await db.prepare(CLEAR_ITEMS).run();
+}
+
+/**
+ * Removes all items with status 'published' from the database.
+ *
+ * @param {D1Database} db
+ * @returns {Promise<number>} Number of deleted rows.
+ */
+export async function deletePublished(db) {
+  const result = await db.prepare(DELETE_PUBLISHED).run();
+  return result.meta?.changes ?? 0;
 }
 
 /**

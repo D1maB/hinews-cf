@@ -135,7 +135,7 @@ test('scheduled runs store fresh items', async (t) => {
   assert.equal(db.rows.size, FEEDS.length);
 });
 
-test('scheduled runs clear stored items before ingesting fresh news', async (t) => {
+test('scheduled runs append fresh items without clearing existing ones', async (t) => {
   t.mock.method(console, 'log', () => {});
   const db = createFakeDb([
     {
@@ -160,5 +160,45 @@ test('scheduled runs clear stored items before ingesting fresh news', async (t) 
 
   await pending;
 
-  assert.equal(db.rows.size, FEEDS.length);
+  assert.equal(db.rows.size, FEEDS.length + 1);
+});
+
+test('scheduled cleanup removes published items every 7 days', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const db = createFakeDb([
+    {
+      feed_id: 'kitguru',
+      feed_name: 'KitGuru',
+      title: 'Published story',
+      url: 'https://example.com/published',
+      published_at: '2024-01-01T00:00:00.000Z',
+      status: 'published',
+      scheduled_at: '2026-11-01T10:00:00.000Z',
+      score: 60,
+    },
+    {
+      feed_id: 'kitguru',
+      feed_name: 'KitGuru',
+      title: 'Scheduled story',
+      url: 'https://example.com/scheduled',
+      published_at: '2024-01-02T00:00:00.000Z',
+      status: 'scheduled',
+      scheduled_at: '2026-11-02T10:00:00.000Z',
+      score: 70,
+    },
+  ]);
+  const env = { ...localAssets(), DB: db };
+  let pending;
+
+  worker.scheduled({ cron: '0 0 */7 * *' }, env, {
+    waitUntil: (promise) => {
+      pending = promise;
+    },
+  });
+
+  await pending;
+
+  assert.equal(db.rows.size, 1);
+  assert.ok(!db.rows.has('https://example.com/published'));
+  assert.ok(db.rows.has('https://example.com/scheduled'));
 });

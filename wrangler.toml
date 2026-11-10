@@ -3,8 +3,9 @@ main = "src/index.js"
 compatibility_date = "2025-01-01"
 
 # Refresh stored headlines twice a day.
+# Publish every minute, ingest every 12 hours, cleanup published items every 7 days.
 [triggers]
-crons = ["* * * * *", "0 */12 * * *"]
+crons = ["* * * * *", "0 */12 * * *", "0 0 */7 * *"]
 
 # Create the database with `wrangler d1 create hinews-cf` and replace the id.
 [[d1_databases]]

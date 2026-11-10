@@ -73,6 +73,17 @@ class FakeStatement {
         this.database.writes += 1;
         return { meta: { changes } };
       }
+      if (sql === "delete from items where status = 'published'") {
+        let changes = 0;
+        for (const [url, row] of [...this.database.rows.entries()]) {
+          if (row.status === 'published') {
+            this.database.rows.delete(url);
+            changes += 1;
+          }
+        }
+        this.database.writes += 1;
+        return { meta: { changes } };
+      }
       if (sql.includes('id')) {
         const [id] = this.args;
         for (const [url, row] of [...this.database.rows.entries()]) {
