@@ -26,6 +26,16 @@ class FakeStatement {
       return { value };
     }
 
+    if (this.sql.toLowerCase().includes('from items') && this.sql.toLowerCase().includes('where')) {
+      const key = this.args[0];
+      const rows = [...this.database.rows.values()];
+      const row = this.database.rows.get(String(key)) ?? rows.find((candidate) => String(candidate.id) === String(key)) ?? null;
+      if (row) {
+        this.database.scans += 1;
+      }
+      return row ?? null;
+    }
+
     if (!this.sql.includes(EXISTS_SQL)) {
       throw new Error(`Unexpected SQL: ${this.sql}`);
     }

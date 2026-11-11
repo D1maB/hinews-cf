@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { backfillScores, clearItems, deletePublished } from '../src/store.js';
+import { backfillScores, clearItems, deletePublished, getItemById, getItemByUrl } from '../src/store.js';
 import { createFakeDb } from './fake-db.js';
 
 test('schedules unscheduled items across one 12 hour window from the last scheduled time', async (t) => {
@@ -44,6 +44,68 @@ test('schedules unscheduled items across one 12 hour window from the last schedu
 
   assert.equal(first.scheduled_at, '2026-11-02T18:00:00.000Z');
   assert.equal(second.scheduled_at, '2026-11-03T00:00:00.000Z');
+});
+
+test('getItemByUrl returns the stored item', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const db = createFakeDb([
+    {
+      id: 1,
+      feed_id: 'kitguru',
+      feed_name: 'KitGuru',
+      title: 'Test story',
+      url: 'https://example.com/test',
+      published_at: '2024-01-01T00:00:00.000Z',
+      status: 'scheduled',
+      scheduled_at: '2020-01-01T00:00:00.000Z',
+      score: 60,
+    },
+  ]);
+
+  const item = await getItemByUrl(db, 'https://example.com/test');
+
+  assert.equal(item?.title, 'Test story');
+  assert.equal(item?.url, 'https://example.com/test');
+});
+
+test('getItemByUrl returns null for unknown url', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const db = createFakeDb();
+
+  const item = await getItemByUrl(db, 'https://example.com/missing');
+
+  assert.equal(item, null);
+});
+
+test('getItemById returns the stored item', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const db = createFakeDb([
+    {
+      id: 12,
+      feed_id: 'kitguru',
+      feed_name: 'KitGuru',
+      title: 'Test story',
+      url: 'https://example.com/test',
+      published_at: '2024-01-01T00:00:00.000Z',
+      status: 'scheduled',
+      scheduled_at: '2020-01-01T00:00:00.000Z',
+      score: 60,
+    },
+  ]);
+
+  const item = await getItemById(db, 12);
+
+  assert.equal(item?.title, 'Test story');
+  assert.equal(item?.url, 'https://example.com/test');
+});
+
+test('getItemById returns null for unknown id', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const db = createFakeDb();
+
+  const item = await getItemById(db, 999);
+
+  assert.equal(item, null);
 });
 
 test('clears all stored items', async (t) => {

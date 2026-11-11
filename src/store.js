@@ -14,6 +14,20 @@ const LIST_ITEMS = `
   ORDER BY id
 `;
 
+export const SELECT_ITEM_BY_URL = `
+  SELECT feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description
+  FROM items
+  WHERE url = ?
+  LIMIT 1
+`;
+
+export const SELECT_ITEM_BY_ID = `
+  SELECT feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description
+  FROM items
+  WHERE id = ?
+  LIMIT 1
+`;
+
 const SELECT_URLS = `
   SELECT url, title
   FROM items
@@ -151,6 +165,30 @@ export async function getDueItems(db) {
 }
 
 /**
+ * Returns the stored item with the given unique URL, if any.
+ *
+ * @param {D1Database} db
+ * @param {string} url
+ * @returns {Promise<Record<string, unknown> | null>}
+ */
+export async function getItemByUrl(db, url) {
+  return db.prepare(SELECT_ITEM_BY_URL).bind(url).first();
+}
+
+/**
+ * Returns the stored item with the given primary key, if any.
+ *
+ * @param {D1Database} db
+ * @param {number | string} id
+ * @returns {Promise<Record<string, unknown> | null>}
+ */
+export async function getItemById(db, id) {
+  return db.prepare(SELECT_ITEM_BY_ID).bind(id).first();
+}
+
+export const MARK_ITEM_PUBLISHED = "UPDATE items SET status = 'published' WHERE url = ?";
+
+/**
  * Marks an item as published to social.
  *
  * @param {D1Database} db
@@ -158,7 +196,7 @@ export async function getDueItems(db) {
  * @returns {Promise<void>}
  */
 export async function markPublished(db, url) {
-  await db.prepare("UPDATE items SET status = 'published' WHERE url = ?").bind(url).run();
+  await db.prepare(MARK_ITEM_PUBLISHED).bind(url).run();
 }
 
 /**

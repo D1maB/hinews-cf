@@ -1,13 +1,6 @@
 import { getDueItems, markPublished } from './store.js';
 
-/**
- * Publishes any scheduled items whose time has come.
- *
- * @param {Record<string, unknown>} env
- * @returns {Promise<{ published: number }>}
- */
 const TELEGRAM_API = 'https://api.telegram.org';
-const TWITTER_API = 'https://api.twitter.com/2';
 
 /**
  * Posts a single item to the configured Telegram channel.
@@ -42,47 +35,16 @@ async function postToTelegram(env, item) {
 }
 
 /**
- * Posts a single item to Twitter (X) using API v2.
+ * Publishes any scheduled items whose time has come.
  *
  * @param {Record<string, unknown>} env
- * @param {{ title: string, url: string }} item
- * @returns {Promise<void>}
+ * @returns {Promise<{ published: number }>}
  */
-async function postToTwitter(env, item) {
-  const bearerToken = env.TWITTER_BEARER_TOKEN;
-
-  if (!bearerToken) {
-    return;
-  }
-
-  const text = item.description
-    ? `${item.title}\n\n${item.description}\n\n${item.url}`
-    : `${item.title}\n\n${item.url}`;
-  const response = await fetch(`${TWITTER_API}/tweets`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${bearerToken}`,
-    },
-    body: JSON.stringify({ text }),
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Twitter tweet failed (${response.status}): ${body}`);
-  }
-
-  console.log(`Published to Twitter: ${item.title} (${item.url})`);
-}
-
 export async function publishScheduled(env) {
   const due = await getDueItems(env.DB);
 
   for (const item of due) {
-    await Promise.all([
-      postToTelegram(env, item).catch((err) => console.error('Telegram error:', err.message)),
-      postToTwitter(env, item).catch((err) => console.error('Twitter error:', err.message)),
-    ]);
+    await postToTelegram(env, item).catch((err) => console.error('Telegram error:', err.message));
     await markPublished(env.DB, item.url);
   }
 
