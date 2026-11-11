@@ -80,9 +80,11 @@ export function renderItem(item) {
 
   const source = item.feed_name ? `<div class="source">Source: ${escapeHtml(item.feed_name)}</div>` : '';
   const status = item.status ? `<div class="status">Status: ${escapeHtml(item.status)}</div>` : '';
+  const excerpt = item.description ? `<div class="excerpt">${escapeHtml(item.description)}</div>` : '';
 
   return `<li>
   <a href="${escapeHtml(safeUrl(item.url))}">${escapeHtml(item.title)}</a>
+  ${excerpt}
   <div class="meta">${score}${time}${scheduled}</div>
   ${source}
   ${status}
@@ -111,7 +113,7 @@ export function renderPage(feeds, total, lastSync = null, items = []) {
       --card: #ffffff;
       --text: #1f2937;
       --muted: #6b7280;
-      --border: #e5e7eb;
+      --border: #d1d5db;
       --accent: #2563eb;
       --score-bg: #e0e7ff;
       --score-text: #1e3a8a;
@@ -122,7 +124,7 @@ export function renderPage(feeds, total, lastSync = null, items = []) {
         --card: #1e293b;
         --text: #e2e8f0;
         --muted: #94a3b8;
-        --border: #334155;
+        --border: #475569;
         --accent: #60a5fa;
         --score-bg: #1e3a8a;
         --score-text: #bfdbfe;
@@ -155,6 +157,7 @@ export function renderPage(feeds, total, lastSync = null, items = []) {
     .meta { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; }
     .source { margin-top: 0.25rem; color: var(--muted); font-size: 0.75rem; }
     .status { margin-top: 0.25rem; color: var(--muted); font-size: 0.75rem; }
+    .excerpt { margin: 0.2rem 0; color: var(--muted); font-size: 0.85rem; }
     .score {
       display: inline-block;
       padding: 0.15rem 0.55rem;

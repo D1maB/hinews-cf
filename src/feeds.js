@@ -159,11 +159,13 @@ export function parseRssItems(xml) {
   const items = toArray(channel.item ?? channel.entry)
     .map((item) => {
       const title = readText(item.title);
+      const description = readText(item.description ?? item.summary ?? item.content ?? item.subtitle);
       return {
         title,
         link: normalizeLink(readLink(item.link)),
         publishedAt: readText(item.pubDate ?? item.published ?? item.updated),
         score: scoreTitle(title),
+        ...(description ? { description: truncateToSentence(description, 300) } : {}),
       };
     })
     .filter(({ title, link }) => title && link);
@@ -177,6 +179,28 @@ export function parseRssItems(xml) {
  */
 function toArray(value) {
   return value == null ? [] : Array.isArray(value) ? value : [value];
+}
+
+/**
+ * Truncates text to complete sentences within a max length.
+ *
+ * @param {string} text
+ * @param {number} [maxLength]
+ * @returns {string}
+ */
+function truncateToSentence(text, maxLength = 300) {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  const sliced = text.slice(0, maxLength);
+  const lastIndex = Math.max(
+    sliced.lastIndexOf('.'),
+    sliced.lastIndexOf('!'),
+    sliced.lastIndexOf('?')
+  );
+  if (lastIndex > 50) {
+    return sliced.slice(0, lastIndex + 1);
+  }
+  return sliced.trim();
 }
 
 /**

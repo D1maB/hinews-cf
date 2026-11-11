@@ -24,7 +24,9 @@ async function postToTelegram(env, item) {
     return;
   }
 
-  const text = `${item.title}\n${item.url}`;
+  const text = item.description
+    ? `${item.title}\n\n${item.description}\n\n${item.url}`
+    : `${item.title}\n\n${item.url}`;
   const response = await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -53,7 +55,9 @@ async function postToTwitter(env, item) {
     return;
   }
 
-  const text = `${item.title}\n${item.url}`;
+  const text = item.description
+    ? `${item.title}\n\n${item.description}\n\n${item.url}`
+    : `${item.title}\n\n${item.url}`;
   const response = await fetch(`${TWITTER_API}/tweets`, {
     method: 'POST',
     headers: {

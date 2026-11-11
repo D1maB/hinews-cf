@@ -27,10 +27,17 @@ export async function ingestFeeds(env) {
       url: item.link,
       publishedAt: toIsoDate(item.publishedAt),
       score: item.score,
+      description: item.description,
     })),
   );
 
-  const deduped = dedupItems(items).filter((item) => item.score > MIN_SCORE);
+  const SPONSORED_REGEX = /\b(pr|ad|collab|sponsored)\b/i;
+
+  const deduped = dedupItems(items).filter((item) => {
+    if (item.score <= MIN_SCORE) return false;
+    const textToCheck = `${item.title} ${item.description ?? ''}`;
+    return !SPONSORED_REGEX.test(textToCheck);
+  });
 
   const lastScheduledAt = await getLastScheduledAt(env.DB);
   const baseTime = lastScheduledAt ? new Date(lastScheduledAt).getTime() : Date.now();
@@ -55,6 +62,7 @@ export async function ingestFeeds(env) {
       url: item.url,
       published_at: item.publishedAt,
       score: item.score,
+      description: item.description,
     })),
   };
 }

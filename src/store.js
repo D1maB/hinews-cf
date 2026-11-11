@@ -4,12 +4,12 @@ import { scoreTitle, MIN_SCORE } from './score.js';
 const SCHEDULE_WINDOW_MINUTES = 12 * 60;
 
 const INSERT_ITEM = `
-  INSERT OR IGNORE INTO items (feed_id, feed_name, title, url, published_at, score, status, scheduled_at)
-  VALUES (?, ?, ?, ?, ?, ?, 'scheduled', ?)
+  INSERT OR IGNORE INTO items (feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description)
+  VALUES (?, ?, ?, ?, ?, ?, 'scheduled', ?, ?)
 `;
 
 const LIST_ITEMS = `
-  SELECT feed_id, feed_name, title, url, published_at, score, status, scheduled_at
+  SELECT feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description
   FROM items
   ORDER BY id
 `;
@@ -62,7 +62,7 @@ export async function saveItems(db, items) {
   const statements = newItems.map((item) =>
     db
       .prepare(INSERT_ITEM)
-      .bind(item.feedId, item.feedName, item.title, item.url, item.publishedAt, item.score, item.scheduledAt ?? null),
+      .bind(item.feedId, item.feedName, item.title, item.url, item.publishedAt, item.score, item.scheduledAt ?? null, item.description ?? null),
   );
 
   const results2 = await db.batch(statements);
