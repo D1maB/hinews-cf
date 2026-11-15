@@ -7,9 +7,7 @@ RUN apk add --no-cache nodejs npm
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
-
-COPY . .
+RUN npm ci --no-audit --no-fund && npm cache clean --force
 
 EXPOSE 8787
 
