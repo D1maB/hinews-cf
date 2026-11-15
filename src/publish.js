@@ -110,7 +110,7 @@ export async function publishScheduled(env) {
   const due = await getDueItems(env.DB);
 
   for (const item of due) {
-    await postToTelegram(env, item).catch((err) => console.error('Telegram error:', err.message));
+    // await postToTelegram(env, item).catch((err) => console.error('Telegram error:', err.message));
     await postToBluesky(env, item).catch((err) => console.error('Bluesky error:', err.message));
     await markPublished(env.DB, item.url);
   }
