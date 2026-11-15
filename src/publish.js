@@ -5,6 +5,18 @@ const BSKY_API = 'https://bsky.social';
 const BSKY_POST_TEXT_LIMIT = 300;
 
 /**
+ * Returns whether the publisher with the given environment flag is enabled.
+ *
+ * @param {Record<string, unknown>} env
+ * @param {string} key
+ * @returns {boolean}
+ */
+function isPublisherEnabled(env, key) {
+  const value = env[key];
+  return value === true || value === 'true';
+}
+
+/**
  * Posts a single item to the configured Telegram channel.
  *
  * @param {Record<string, unknown>} env
@@ -12,8 +24,13 @@ const BSKY_POST_TEXT_LIMIT = 300;
  * @returns {Promise<void>}
  */
 async function postToTelegram(env, item) {
+  const enabled = isPublisherEnabled(env, 'TELEGRAM_ENABLED');
   const token = env.TELEGRAM_BOT_TOKEN;
   const chatId = env.TELEGRAM_CHAT_ID;
+
+  if (!enabled) {
+    return;
+  }
 
   if (!token || !chatId) {
     return;
@@ -63,8 +80,13 @@ function buildBlueskyText(item) {
  * @returns {Promise<void>}
  */
 async function postToBluesky(env, item) {
+  const enabled = isPublisherEnabled(env, 'BSKY_ENABLED');
   const handle = env.BSKY_HANDLE;
   const password = env.BSKY_APP_PASSWORD;
+
+  if (!enabled) {
+    return;
+  }
 
   if (!handle || !password) {
     return;
@@ -110,7 +132,7 @@ export async function publishScheduled(env) {
   const due = await getDueItems(env.DB);
 
   for (const item of due) {
-    // await postToTelegram(env, item).catch((err) => console.error('Telegram error:', err.message));
+    await postToTelegram(env, item).catch((err) => console.error('Telegram error:', err.message));
     await postToBluesky(env, item).catch((err) => console.error('Bluesky error:', err.message));
     await markPublished(env.DB, item.url);
   }

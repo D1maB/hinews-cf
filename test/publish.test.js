@@ -40,6 +40,7 @@ test('publishScheduled posts to Telegram when configured', async (t) => {
   ]);
   const env = {
     DB: db,
+    TELEGRAM_ENABLED: true,
     TELEGRAM_BOT_TOKEN: 'test-token',
     TELEGRAM_CHAT_ID: '123456',
   };
@@ -87,6 +88,7 @@ test('publishScheduled posts to Bluesky when configured', async (t) => {
   ]);
   const env = {
     DB: db,
+    BSKY_ENABLED: true,
     BSKY_HANDLE: 'hinews.bsky.social',
     BSKY_APP_PASSWORD: 'app-password',
   };
@@ -128,4 +130,63 @@ test('publishScheduled posts to Bluesky when configured', async (t) => {
   assert.equal(JSON.parse(calls[1].init.body).text, 'Test story\n\nA description worth reading.\n\nhttps://example.com/test');
 
   restoreFetch();
+});
+
+test('publishScheduled skips Telegram when not enabled', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  t.mock.method(console, 'error', () => {});
+  const db = createFakeDb([
+    {
+      feed_id: 'kitguru',
+      feed_name: 'KitGuru',
+      title: 'Test story',
+      url: 'https://example.com/test',
+      published_at: '2024-01-01T00:00:00.000Z',
+      status: 'scheduled',
+      scheduled_at: '2020-01-01T00:00:00.000Z',
+      score: 60,
+    },
+  ]);
+  const env = {
+    DB: db,
+    TELEGRAM_ENABLED: false,
+    TELEGRAM_BOT_TOKEN: 'test-token',
+    TELEGRAM_CHAT_ID: '123456',
+  };
+
+  mockFetch([]);
+
+  const result = await publishScheduled(env);
+
+  assert.equal(result.published, 1);
+});
+
+test('publishScheduled skips Bluesky when not enabled', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  t.mock.method(console, 'error', () => {});
+  const db = createFakeDb([
+    {
+      feed_id: 'kitguru',
+      feed_name: 'KitGuru',
+      title: 'Test story',
+      url: 'https://example.com/test',
+      published_at: '2024-01-01T00:00:00.000Z',
+      status: 'scheduled',
+      scheduled_at: '2020-01-01T00:00:00.000Z',
+      score: 60,
+      description: 'A description worth reading.',
+    },
+  ]);
+  const env = {
+    DB: db,
+    BSKY_ENABLED: false,
+    BSKY_HANDLE: 'hinews.bsky.social',
+    BSKY_APP_PASSWORD: 'app-password',
+  };
+
+  mockFetch([]);
+
+  const result = await publishScheduled(env);
+
+  assert.equal(result.published, 1);
 });
