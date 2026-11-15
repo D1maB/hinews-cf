@@ -1,6 +1,8 @@
 import { getDueItems, markPublished } from './store.js';
 
 const TELEGRAM_API = 'https://api.telegram.org';
+const BSKY_API = 'https://bsky.social';
+const BSKY_POST_TEXT_LIMIT = 300;
 
 /**
  * Posts a single item to the configured Telegram channel.
@@ -35,6 +37,70 @@ async function postToTelegram(env, item) {
 }
 
 /**
+ * Builds the Bluesky post text for an item, staying within the 300 character limit.
+ *
+ * @param {{ title: string, description?: string | null, url: string }} item
+ * @returns {string}
+ */
+function buildBlueskyText(item) {
+  const text = item.description
+    ? `${item.title}\n\n${item.description}\n\n${item.url}`
+    : `${item.title}\n\n${item.url}`;
+
+  if (text.length <= BSKY_POST_TEXT_LIMIT) {
+    return text;
+  }
+
+  return text.slice(0, BSKY_POST_TEXT_LIMIT);
+}
+
+/**
+ * Posts a single item to the authenticated Bluesky account. Does nothing when
+ * the Bluesky handle or app password is not configured.
+ *
+ * @param {Record<string, unknown>} env
+ * @param {{ title: string, description?: string | null, url: string }} item
+ * @returns {Promise<void>}
+ */
+async function postToBluesky(env, item) {
+  const handle = env.BSKY_HANDLE;
+  const password = env.BSKY_APP_PASSWORD;
+
+  if (!handle || !password) {
+    return;
+  }
+
+  const sessionResponse = await fetch(`${BSKY_API}/xrpc/app.bsky.actor.createSession`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ identifier: handle, password }),
+  });
+
+  if (!sessionResponse.ok) {
+    const body = await sessionResponse.text();
+    throw new Error(`Bluesky session creation failed (${sessionResponse.status}): ${body}`);
+  }
+
+  const session = await sessionResponse.json();
+
+  const response = await fetch(`${BSKY_API}/xrpc/app.bsky.feed.post`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${session.accessJwt}`,
+    },
+    body: JSON.stringify({ text: buildBlueskyText(item) }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Bluesky post failed (${response.status}): ${body}`);
+  }
+
+  console.log(`Published to Bluesky: ${item.title} (${item.url})`);
+}
+
+/**
  * Publishes any scheduled items whose time has come.
  *
  * @param {Record<string, unknown>} env
@@ -45,6 +111,7 @@ export async function publishScheduled(env) {
 
   for (const item of due) {
     await postToTelegram(env, item).catch((err) => console.error('Telegram error:', err.message));
+    await postToBluesky(env, item).catch((err) => console.error('Bluesky error:', err.message));
     await markPublished(env.DB, item.url);
   }
 

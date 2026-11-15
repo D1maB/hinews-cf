@@ -68,3 +68,64 @@ test('publishScheduled does nothing when no items are due', async (t) => {
 
   assert.equal(result.published, 0);
 });
+
+test('publishScheduled posts to Bluesky when configured', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  t.mock.method(console, 'error', () => {});
+  const db = createFakeDb([
+    {
+      feed_id: 'kitguru',
+      feed_name: 'KitGuru',
+      title: 'Test story',
+      url: 'https://example.com/test',
+      published_at: '2024-01-01T00:00:00.000Z',
+      status: 'scheduled',
+      scheduled_at: '2020-01-01T00:00:00.000Z',
+      score: 60,
+      description: 'A description worth reading.',
+    },
+  ]);
+  const env = {
+    DB: db,
+    BSKY_HANDLE: 'hinews.bsky.social',
+    BSKY_APP_PASSWORD: 'app-password',
+  };
+
+  const calls = [];
+  globalThis.fetch = async (url, init) => {
+    const callUrl = String(url);
+    calls.push({ url: callUrl, init });
+
+    if (callUrl.includes('app.bsky.actor.createSession')) {
+      return new Response(JSON.stringify({ accessJwt: 'bsky-access-token', refreshJwt: 'bsky-refresh-token' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
+    if (callUrl.includes('app.bsky.feed.post')) {
+      return new Response(JSON.stringify({ ok: true, result: { message: { uri: 'at://did:plc:test/app.bsky.feed.post/1' } } }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
+    throw new Error(`Unexpected fetch: ${callUrl}`);
+  };
+
+  const result = await publishScheduled(env);
+
+  assert.equal(result.published, 1);
+  assert.equal(calls.length, 2);
+
+  assert.ok(calls[0].url.includes('app.bsky.actor.createSession'));
+  assert.equal(calls[0].init.method, 'POST');
+  assert.deepEqual(JSON.parse(calls[0].init.body), { identifier: 'hinews.bsky.social', password: 'app-password' });
+
+  assert.ok(calls[1].url.includes('app.bsky.feed.post'));
+  assert.equal(calls[1].init.method, 'POST');
+  assert.equal(calls[1].init.headers.authorization, 'Bearer bsky-access-token');
+  assert.equal(JSON.parse(calls[1].init.body).text, 'Test story\n\nA description worth reading.\n\nhttps://example.com/test');
+
+  restoreFetch();
+});
