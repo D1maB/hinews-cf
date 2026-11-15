@@ -21,7 +21,7 @@ function isPublisherEnabled(env, key) {
  *
  * @param {Record<string, unknown>} env
  * @param {{ title: string, url: string }} item
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>}
  */
 async function postToTelegram(env, item) {
   const enabled = isPublisherEnabled(env, 'TELEGRAM_ENABLED');
@@ -29,11 +29,11 @@ async function postToTelegram(env, item) {
   const chatId = env.TELEGRAM_CHAT_ID;
 
   if (!enabled) {
-    return;
+    return false;
   }
 
   if (!token || !chatId) {
-    return;
+    return false;
   }
 
   const text = item.description
@@ -51,6 +51,8 @@ async function postToTelegram(env, item) {
   }
 
   console.log(`Published to Telegram: ${item.title} (${item.url})`);
+
+  return true;
 }
 
 /**
@@ -77,7 +79,7 @@ function buildBlueskyText(item) {
  *
  * @param {Record<string, unknown>} env
  * @param {{ title: string, description?: string | null, url: string }} item
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>}
  */
 async function postToBluesky(env, item) {
   const enabled = isPublisherEnabled(env, 'BSKY_ENABLED');
@@ -85,11 +87,11 @@ async function postToBluesky(env, item) {
   const password = env.BSKY_APP_PASSWORD;
 
   if (!enabled) {
-    return;
+    return false;
   }
 
   if (!handle || !password) {
-    return;
+    return false;
   }
 
   const sessionResponse = await fetch(`${BSKY_API}/xrpc/app.bsky.actor.createSession`, {
@@ -120,6 +122,25 @@ async function postToBluesky(env, item) {
   }
 
   console.log(`Published to Bluesky: ${item.title} (${item.url})`);
+
+  return true;
+}
+
+/**
+ * Publishes an item to every enabled social platform, returning whether at
+ * least one platform accepted the post.
+ *
+ * @param {Record<string, unknown>} env
+ * @param {{ title: string, url: string }} item
+ * @returns {Promise<boolean>}
+ */
+async function publishToSocials(env, item) {
+  const results = await Promise.allSettled([
+    postToTelegram(env, item),
+    postToBluesky(env, item),
+  ]);
+
+  return results.some((result) => result.status === 'fulfilled' && result.value === true);
 }
 
 /**
@@ -130,14 +151,18 @@ async function postToBluesky(env, item) {
  */
 export async function publishScheduled(env) {
   const due = await getDueItems(env.DB);
+  let publishedCount = 0;
 
   for (const item of due) {
-    await postToTelegram(env, item).catch((err) => console.error('Telegram error:', err.message));
-    await postToBluesky(env, item).catch((err) => console.error('Bluesky error:', err.message));
-    await markPublished(env.DB, item.url);
+    const published = await publishToSocials(env, item);
+
+    if (published) {
+      await markPublished(env.DB, item.url);
+      publishedCount += 1;
+    }
   }
 
-  console.log(`Published ${due.length} item(s) to social`);
+  console.log(`Published ${publishedCount} item(s) to social`);
 
-  return { published: due.length };
+  return { published: publishedCount };
 }

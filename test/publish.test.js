@@ -158,7 +158,9 @@ test('publishScheduled skips Telegram when not enabled', async (t) => {
 
   const result = await publishScheduled(env);
 
-  assert.equal(result.published, 1);
+  assert.equal(result.published, 0);
+  const item = db.rows.get('https://example.com/test');
+  assert.equal(item.status, 'scheduled');
 });
 
 test('publishScheduled skips Bluesky when not enabled', async (t) => {
@@ -188,5 +190,55 @@ test('publishScheduled skips Bluesky when not enabled', async (t) => {
 
   const result = await publishScheduled(env);
 
-  assert.equal(result.published, 1);
+  assert.equal(result.published, 0);
+  const item = db.rows.get('https://example.com/test');
+  assert.equal(item.status, 'scheduled');
+});
+
+test('publishScheduled does not mark published when Bluesky post fails', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  t.mock.method(console, 'error', () => {});
+  const db = createFakeDb([
+    {
+      feed_id: 'kitguru',
+      feed_name: 'KitGuru',
+      title: 'Test story',
+      url: 'https://example.com/test',
+      published_at: '2024-01-01T00:00:00.000Z',
+      status: 'scheduled',
+      scheduled_at: '2020-01-01T00:00:00.000Z',
+      score: 60,
+      description: 'A description worth reading.',
+    },
+  ]);
+  const env = {
+    DB: db,
+    BSKY_ENABLED: true,
+    BSKY_HANDLE: 'hinews.bsky.social',
+    BSKY_APP_PASSWORD: 'app-password',
+  };
+
+  globalThis.fetch = async (url) => {
+    const callUrl = String(url);
+
+    if (callUrl.includes('app.bsky.actor.createSession')) {
+      return new Response(JSON.stringify({ accessJwt: 'bsky-access-token', refreshJwt: 'bsky-refresh-token' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: 'Bluesky unavailable' }), {
+      status: 503,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+
+  const result = await publishScheduled(env);
+
+  assert.equal(result.published, 0);
+  const item = db.rows.get('https://example.com/test');
+  assert.equal(item.status, 'scheduled');
+
+  restoreFetch();
 });
