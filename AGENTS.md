@@ -56,6 +56,7 @@ Write clean, readable JavaScript as an experienced developer would:
 ## Testing
 
 - Every behavioral change needs a test.
+- After changing source behavior, update the affected tests and run the full suite before committing.
 - Run `docker-compose run --rm test` before committing; all tests must pass.
 - Tests use the built-in `node:test` runner inside the container and live in `test/`.
 - Mock remote feeds in tests; never depend on the network.
