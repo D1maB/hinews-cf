@@ -28,6 +28,12 @@ cp .env.example .env
 | ----------------------- | ---------------------------------------------------- |
 | `CLOUDFLARE_API_TOKEN`  | API token with the Edit Cloudflare Workers template   |
 | `CLOUDFLARE_ACCOUNT_ID` | Optional, when the token can access multiple accounts |
+| `BSKY_ENABLED`          | Set to `true` to publish headlines to Bluesky        |
+| `BSKY_HANDLE`           | Bluesky handle (e.g. user.bsky.social) used to publish |
+| `BSKY_APP_PASSWORD`     | Bluesky app password used to publish                 |
+| `TELEGRAM_ENABLED`      | Set to `true` to publish headlines to Telegram      |
+| `TELEGRAM_BOT_TOKEN`    | Telegram bot token used to publish                  |
+| `TELEGRAM_CHAT_ID`      | Telegram chat/channel id used to publish           |
 
 `.env` is ignored by Git and Docker. `docker-compose` loads it automatically when run
 from the repository root. Commit only `.env.example`.

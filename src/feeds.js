@@ -188,7 +188,7 @@ function toArray(value) {
  * @param {number} [maxLength]
  * @returns {string}
  */
-function truncateToSentence(text, maxLength = 300) {
+export function truncateToSentence(text, maxLength = 300) {
   if (!text) return '';
   if (text.length <= maxLength) return text;
   const sliced = text.slice(0, maxLength);

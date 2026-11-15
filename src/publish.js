@@ -1,8 +1,12 @@
 import { getDueItems, markPublished } from './store.js';
+import { truncateToSentence } from './feeds.js';
 
 const TELEGRAM_API = 'https://api.telegram.org';
 const BSKY_API = 'https://bsky.social';
 const BSKY_POST_TEXT_LIMIT = 300;
+const BSKY_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+
+let bskSession = null;
 
 /**
  * Returns whether the publisher with the given environment flag is enabled.
@@ -66,11 +70,7 @@ function buildBlueskyText(item) {
     ? `${item.title}\n\n${item.description}\n\n${item.url}`
     : `${item.title}\n\n${item.url}`;
 
-  if (text.length <= BSKY_POST_TEXT_LIMIT) {
-    return text;
-  }
-
-  return text.slice(0, BSKY_POST_TEXT_LIMIT);
+  return truncateToSentence(text, BSKY_POST_TEXT_LIMIT);
 }
 
 /**
@@ -94,18 +94,28 @@ async function postToBluesky(env, item) {
     return false;
   }
 
-  const sessionResponse = await fetch(`${BSKY_API}/xrpc/app.bsky.actor.createSession`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ identifier: handle, password }),
-  });
+  let session = bskSession;
 
-  if (!sessionResponse.ok) {
-    const body = await sessionResponse.text();
-    throw new Error(`Bluesky session creation failed (${sessionResponse.status}): ${body}`);
+  if (!session || session.expiresAt <= Date.now()) {
+    const sessionResponse = await fetch(`${BSKY_API}/xrpc/app.bsky.actor.createSession`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ identifier: handle, password }),
+    });
+
+    if (!sessionResponse.ok) {
+      const body = await sessionResponse.text();
+      throw new Error(`Bluesky session creation failed (${sessionResponse.status}): ${body}`);
+    }
+
+    const created = await sessionResponse.json();
+    session = {
+      accessJwt: created.accessJwt,
+      refreshJwt: created.refreshJwt,
+      expiresAt: Date.now() + BSKY_SESSION_TTL_MS,
+    };
+    bskSession = session;
   }
-
-  const session = await sessionResponse.json();
 
   const response = await fetch(`${BSKY_API}/xrpc/app.bsky.feed.post`, {
     method: 'POST',
