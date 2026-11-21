@@ -1,4 +1,4 @@
-export const MIN_SCORE = 50;
+export const MIN_SCORE = 30;
 
 const DEFAULT_SCORE_BASE_URL = 'https://api.openai.com/v1';
 const DEFAULT_SCORE_MODEL = 'gpt-4o-mini';

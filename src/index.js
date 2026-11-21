@@ -15,14 +15,7 @@ import { getScoreOptions } from './score.js';
  */
 async function handleRequest(_request, env) {
   const feeds = getFeeds(env);
-  let items = await listItems(env.DB);
-
-  if (items.length === 0) {
-    const result = await ingestFeeds(env);
-    items = result.items ?? items;
-  }
-
-  await backfillScores(env.DB, getScoreOptions(env));
+  const items = await listItems(env.DB);
 
   const lastSync = await getLastSync(env.DB);
 
@@ -31,6 +24,18 @@ async function handleRequest(_request, env) {
   return new Response(renderPage(feeds, items.length, lastSync, allItems), {
     headers: { 'content-type': 'text/html;charset=UTF-8' },
   });
+}
+
+/**
+ * Runs the scheduled ingestion, which scores fresh headlines and refreshes the database.
+ *
+ * @param {Record<string, unknown>} env
+ * @returns {Promise<{ inserted: number, feeds: Awaited<ReturnType<typeof loadFeeds>> }>}
+ */
+async function runScheduledIngestion(env) {
+  const result = await ingestFeeds(env);
+  await backfillScores(env.DB, getScoreOptions(env));
+  return result;
 }
 
 /**
@@ -51,7 +56,7 @@ function handleScheduled(controller, env, ctx) {
       ctx.waitUntil(deletePublished(env.DB));
       break;
     default:
-      ctx.waitUntil(ingestFeeds(env));
+      ctx.waitUntil(runScheduledIngestion(env));
       break;
   }
 }

@@ -103,7 +103,7 @@ test('renders all stored items in a single list with source notes sorted by sche
   assert.match(items[1], /Status: scheduled/);
 });
 
-test('seeds the database on the first request and reuses it afterwards', async (t) => {
+test('renders an empty page when the database has no items yet', async (t) => {
   t.mock.method(console, 'log', () => {});
   const db = createFakeDb();
   const assets = localAssets();
@@ -113,10 +113,10 @@ test('seeds the database on the first request and reuses it afterwards', async (
   const first = await (await worker.fetch(REQUEST, env)).text();
   const fetchesAfterFirstRequest = assets.fetches();
 
-  assert.equal(db.rows.size, FEEDS.length);
-  assert.match(first, /8 stored headlines/);
-  assert.equal(fetchesAfterFirstRequest, FEEDS.length);
-  assert.match(first, /Last sync: \d{1,2} [A-Za-z]+ \d{4} \d{2}:\d{2}/);
+  assert.equal(db.rows.size, 0);
+  assert.match(first, /0 stored headlines/);
+  assert.equal(fetchesAfterFirstRequest, 0);
+  assert.match(first, /Last sync: never/);
 
   await worker.fetch(REQUEST, env);
 
