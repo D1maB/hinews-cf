@@ -81,6 +81,16 @@ The app runs entirely in Docker, so you do not need Node.js installed on the hos
    docker-compose down
    ```
 
+Common tasks are also available as Makefile targets that wrap the same Compose commands:
+
+```bash
+make up       # build and start the worker
+make feeds    # download the RSS cache
+make test     # run the test suite
+make logs     # follow the worker logs
+make down     # stop and remove the containers
+```
+
 Source files are mounted into the container, so edits reload automatically. Re-run the
 download command to refresh the local feed cache. `.env` is not needed for local
 development; it is only required for deployment.
@@ -117,6 +127,8 @@ Run the test suite in a one-off container:
 ```bash
 docker-compose run --rm test
 ```
+
+(or simply `make test`)
 
 The tests use mocked feeds and an in-memory D1 stand-in. They cover parsing, storage,
 URL deduplication, scheduled ingestion, full database rendering, and failing feeds.

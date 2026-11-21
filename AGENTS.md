@@ -86,7 +86,7 @@ All local infrastructure runs in Docker on Alpine:
   run on musl-only Alpine.
 - Keep `docker-compose.yml` compatible with `docker-compose` v1 (Compose file 3.8).
 - Use the standalone `docker-compose` CLI for every command, run from the repository
-  root.
+  root. The equivalent `make` targets are fine too.
 - The `app` service serves the worker on port `8787`, mounts the `feeds` volume
   read-only, applies local D1 migrations, and enables `--test-scheduled`.
 - Local development uses `wrangler.dev.toml`, whose `[assets]` section exposes the
@@ -127,3 +127,7 @@ All local infrastructure runs in Docker on Alpine:
 - `docker-compose down` — stop and remove the containers.
 - `docker-compose run --rm test` — run the test suite.
 - `docker-compose run --rm deploy` — deploy using `CLOUDFLARE_API_TOKEN`.
+
+Common tasks are also available as Makefile targets that forward to the Compose commands
+above: `make up`, `make down`, `make logs`, `make build`, `make feeds`, `make test`,
+`make scheduled`, and `make deploy`.
