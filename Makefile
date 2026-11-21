@@ -1,4 +1,4 @@
-.PHONY: up down logs build feeds test scheduled deploy query migrate help score reset
+.PHONY: up down logs build feeds test scheduled deploy query migrate help score wipe
 
 DB ?= DB
 DB_QUERY ?= SELECT COUNT(*) FROM items
@@ -34,7 +34,7 @@ query:
 migrate:
 	docker-compose run --rm --entrypoint npx app npx wrangler d1 migrations apply $(DB) --local --config wrangler.dev.toml
 
-reset:
+wipe:
 	docker-compose run --rm --entrypoint npx app npx wrangler d1 execute DB --local --config wrangler.dev.toml --command "DELETE FROM items"
 
 score:
@@ -53,6 +53,6 @@ help:
 	@echo "  make deploy     - deploy to Cloudflare"
 	@echo "  make query      - run a SQL query against local D1 (e.g. make query DB_QUERY=\"SELECT COUNT(*) FROM items\")"
 	@echo "  make migrate    - apply D1 migrations to the local database"
-	@echo "  make reset      - wipe all stored items from the local database"
+	@echo "  make wipe       - wipe all stored items from the local database"
 	@echo "  make score      - score a headline via the AI model (e.g. make score SCORE_TEXT=\"RTX 5090 review\")"
 	@echo "  make help       - show this help"
