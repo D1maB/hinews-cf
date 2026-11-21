@@ -16,6 +16,8 @@ services:
       - .:/app
       - node_modules:/app/node_modules
       - feeds:/app/feeds:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     stdin_open: true
     tty: true
     healthcheck:
