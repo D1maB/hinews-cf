@@ -1,6 +1,6 @@
 export const MIN_SCORE = 30;
 
-const DEFAULT_SCORE_BASE_URL = 'https://api.openai.com/v1';
+const DEFAULT_SCORE_BASE_URL = 'https://api.openai.com';
 const DEFAULT_SCORE_MODEL = 'gpt-4o-mini';
 
 const SCORE_SYSTEM_PROMPT =
@@ -49,7 +49,7 @@ export async function scoreTitle(title, options = {}) {
  */
 async function scoreWithAi({ title, baseUrl, model }) {
   try {
-    const response = await fetch(`${baseUrl.replace(/\/+$/, '')}/chat/completions`, {
+    const response = await fetch(`${baseUrl.replace(/\/+$/, '')}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({

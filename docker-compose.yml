@@ -10,7 +10,7 @@ services:
       - "8787:8787"
     environment:
       CI: "true"
-      SCORE_BASE_URL: ${SCORE_BASE_URL:-http://host.docker.internal:11434/v1}
+      SCORE_BASE_URL: ${SCORE_BASE_URL:-http://host.docker.internal:11435}
       SCORE_MODEL: ${SCORE_MODEL:-llama3.2:1b}
     volumes:
       - .:/app

@@ -5,7 +5,7 @@ compatibility_date = "2025-01-01"
 # Local development scores headlines through a local Ollama model.
 # Production defaults to the remote model configured in src/score.js.
 [vars]
-SCORE_BASE_URL = "http://host.docker.internal:11434/v1"
+SCORE_BASE_URL = "http://host.docker.internal:11435"
 SCORE_MODEL = "llama3.2:1b"
 
 # Local development reads downloaded feeds through this static assets binding.
