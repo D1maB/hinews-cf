@@ -47,7 +47,7 @@ export async function saveItems(
 
   const seenUrls = new Set<string>();
   const seenTitles = new Set<string>();
-  const newItems = items.filter((item: any) => {
+  const newItems = items.filter((item: unknown) => {
     const titleKey = item.title.trim().toLowerCase();
     if (
       existingUrls.has(item.url) ||
@@ -64,7 +64,7 @@ export async function saveItems(
 
   if (newItems.length === 0) return 0;
 
-  const statements = newItems.map((item: any) =>
+  const statements = newItems.map((item: unknown) =>
     db
       .prepare(INSERT_ITEM)
       .bind(
@@ -80,15 +80,15 @@ export async function saveItems(
   );
 
   const results2 = await db.batch(statements);
-  return (results2 as any[]).reduce(
-    (total: number, result: any) => total + (result.meta?.changes ?? 0),
+  return (results2 as unknown[]).reduce(
+    (total: number, result: unknown) => total + (result.meta?.changes ?? 0),
     0,
   );
 }
 
-export async function listItems(db: D1Database): Promise<any[]> {
+export async function listItems(db: D1Database): Promise<unknown[]> {
   const { results = [] } = await db.prepare(LIST_ITEMS).all();
-  return results as any[];
+  return results as unknown[];
 }
 
 const GET_META = `SELECT value FROM meta WHERE key = ?`;
@@ -96,7 +96,7 @@ const SET_META = `INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) D
 
 export async function getLastSync(db: D1Database): Promise<string | null> {
   const row = await db.prepare(GET_META).bind('last_sync_at').first();
-  return (row as any)?.value ?? null;
+  return (row as unknown)?.value ?? null;
 }
 
 export async function setLastSync(
@@ -121,25 +121,28 @@ export async function getLastScheduledAt(
   );
 }
 
-export async function getDueItems(db: D1Database): Promise<any[]> {
+export async function getDueItems(db: D1Database): Promise<unknown[]> {
   const items = await listItems(db);
   const now = new Date().toISOString();
   return items.filter(
-    (item: any) =>
+    (item: unknown) =>
       item.status === 'scheduled' &&
       item.scheduled_at &&
       item.scheduled_at <= now,
   );
 }
 
-export async function getItemByUrl(db: D1Database, url: string): Promise<any> {
+export async function getItemByUrl(
+  db: D1Database,
+  url: string,
+): Promise<unknown> {
   return db.prepare(SELECT_ITEM_BY_URL).bind(url).first();
 }
 
 export async function getItemById(
   db: D1Database,
   id: number | string,
-): Promise<any> {
+): Promise<unknown> {
   return db.prepare(SELECT_ITEM_BY_ID).bind(id).first();
 }
 
@@ -182,11 +185,11 @@ export async function deletePublished(db: D1Database): Promise<number> {
 
 export async function backfillScores(
   db: D1Database,
-  options: any = {},
+  options: unknown = {},
 ): Promise<void> {
   const { results = [] } = await db.prepare(SELECT_UNSCORED).all();
 
-  for (const row of results as any[]) {
+  for (const row of results as unknown[]) {
     await db
       .prepare(UPDATE_SCORE)
       .bind(await scoreTitle(row.title, options), row.url)
@@ -206,7 +209,7 @@ export async function backfillScores(
   const { results: allRows = [] } = await db
     .prepare('SELECT url, scheduled_at FROM items')
     .all();
-  const unscheduled = (allRows as any[]).filter((row) => !row.scheduled_at);
+  const unscheduled = (allRows as unknown[]).filter((row) => !row.scheduled_at);
   const last = await getLastScheduledAt(db);
   const baseTime = last ? new Date(last).getTime() : Date.now();
   for (let index = 0; index < unscheduled.length; index += 1) {

@@ -6,7 +6,7 @@ const BSKY_API = 'https://bsky.social';
 const BSKY_POST_TEXT_LIMIT = 300;
 const BSKY_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
-let bskSession: any = null;
+let bskSession: unknown = null;
 
 function isPublisherEnabled(
   env: Record<string, unknown>,

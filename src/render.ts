@@ -23,7 +23,7 @@ export function safeUrl(value: unknown): string {
 
 export function formatDate(value: unknown): string {
   if (!value) return '';
-  const date = new Date(value as any);
+  const date = new Date(value as unknown);
   return Number.isNaN(date.getTime())
     ? ''
     : date.toLocaleDateString('en-US', {
@@ -35,14 +35,14 @@ export function formatDate(value: unknown): string {
 
 export function formatSyncDate(value: unknown): string {
   if (!value) return '';
-  const date = new Date(value as any);
+  const date = new Date(value as unknown);
   if (Number.isNaN(date.getTime())) return '';
   const monthName = date.toLocaleDateString('en-US', { month: 'long' });
   const pad = (num: number) => String(num).padStart(2, '0');
   return `${date.getDate()} ${monthName} ${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export function renderItem(item: any): string {
+export function renderItem(item: unknown): string {
   const published = formatDate(item.published_at);
   const scoreValue = item.score != null ? Number(item.score) : null;
   const scoreClass =
@@ -83,10 +83,10 @@ export function renderItem(item: any): string {
 }
 
 export function renderPage(
-  feeds: any[],
+  feeds: unknown[],
   total: number,
-  lastSync: any = null,
-  items: any[] = [],
+  lastSync: unknown = null,
+  items: unknown[] = [],
 ): string {
   const list =
     items.length > 0

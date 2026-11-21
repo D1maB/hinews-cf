@@ -46,7 +46,7 @@ async function runScheduledIngestion(env: Record<string, unknown>) {
 }
 
 function handleScheduled(
-  controller: any,
+  controller: unknown,
   env: Record<string, unknown>,
   ctx: { waitUntil: (p: Promise<unknown>) => void },
 ) {
@@ -72,7 +72,7 @@ export default {
     return handleRequest(request, env);
   },
   async scheduled(
-    controller: any,
+    controller: unknown,
     env: Record<string, unknown>,
     ctx: { waitUntil: (p: Promise<unknown>) => void },
   ) {
