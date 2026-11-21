@@ -28,13 +28,29 @@ const RSS = `<?xml version="1.0" encoding="UTF-8"?>
  * @returns {string}
  */
 function rssFor(feedId) {
-  return RSS.replaceAll('https://example.com/', `https://example.com/${feedId}/`);
+  return RSS.replaceAll(
+    'https://example.com/',
+    `https://example.com/${feedId}/`,
+  );
 }
 
 test('parses RSS items, decoding entities and dropping unsafe rows', async (t) => {
-  t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ choices: [{ message: { content: '{"score": 82}' } }] }), { status: 200 }));
+  t.mock.method(
+    globalThis,
+    'fetch',
+    async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '{"score": 82}' } }],
+        }),
+        { status: 200 },
+      ),
+  );
 
-  const items = await parseRssItems(RSS, { baseUrl: 'http://localhost:11434/v1', model: 'llama3.2:1b' });
+  const items = await parseRssItems(RSS, {
+    baseUrl: 'http://localhost:11434/v1',
+    model: 'llama3.2:1b',
+  });
 
   assert.deepEqual(items, [
     {
@@ -53,7 +69,17 @@ test('parses RSS items, decoding entities and dropping unsafe rows', async (t) =
 });
 
 test('loads every feed from local storage', async (t) => {
-  const aiFetch = t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ choices: [{ message: { content: '{"score": 82}' } }] }), { status: 200 }));
+  const aiFetch = t.mock.method(
+    globalThis,
+    'fetch',
+    async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '{"score": 82}' } }],
+        }),
+        { status: 200 },
+      ),
+  );
 
   const env = {
     ASSETS: {
@@ -80,10 +106,15 @@ test('fetches remote feeds when no assets binding exists', async (t) => {
     return new Response(RSS);
   });
 
-  await loadFeeds({ SCORE_BASE_URL: 'http://localhost:11434/v1', SCORE_MODEL: 'llama3.2:1b' });
+  await loadFeeds({
+    SCORE_BASE_URL: 'http://localhost:11434/v1',
+    SCORE_MODEL: 'llama3.2:1b',
+  });
 
   assert.deepEqual(
-    requestedUrls.filter((url) => !String(url).includes('/chat/completions')).sort(),
+    requestedUrls
+      .filter((url) => !String(url).includes('/chat/completions'))
+      .sort(),
     FEEDS.map((feed) => feed.url).sort(),
   );
 });
@@ -105,6 +136,13 @@ test('keeps loading other feeds when a local feed is missing', async (t) => {
   const feeds = await loadFeeds(env);
   const techPowerUp = feeds.find((feed) => feed.id === 'techpowerup');
 
-  assert.match(techPowerUp.error, /Local feed techpowerup\.xml not found \(HTTP 404\)/);
-  assert.ok(feeds.filter((feed) => feed.id !== 'techpowerup').every((feed) => !feed.error));
+  assert.match(
+    techPowerUp.error,
+    /Local feed techpowerup\.xml not found \(HTTP 404\)/,
+  );
+  assert.ok(
+    feeds
+      .filter((feed) => feed.id !== 'techpowerup')
+      .every((feed) => !feed.error),
+  );
 });

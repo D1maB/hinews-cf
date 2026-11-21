@@ -42,6 +42,8 @@ Rules:
 
 Write clean, readable JavaScript as an experienced developer would:
 
+- The codebase is TypeScript; keep new files as `.ts` and run `docker-compose run --rm test` (which uses `tsx`) before committing.
+- Follow TS best practices: strict settings, avoid `any` (use `unknown` + narrowing), clear types, discriminated unions for states/outcomes, explicit error handling, and lint/typecheck in workflow.
 - Use modern ES modules (`import`/`export`) and `const` by default; use `let` only when reassignment is needed.
 - Prefer small, single-purpose functions with descriptive names.
 - Extract magic values into named constants.

@@ -20,7 +20,19 @@ feeds:
 	docker-compose run --rm download-feeds
 
 test:
-	docker-compose run --rm test
+	docker-compose run --rm tools npx tsx --test
+
+lint:
+	docker-compose run --rm tools npx eslint .
+
+format:
+	docker-compose run --rm tools npx prettier --write .
+
+format-check:
+	docker-compose run --rm tools npx prettier --check .
+
+qa:
+	docker-compose run --rm tools sh -c "npx prettier --check . && npx eslint . && npx tsx --test"
 
 scheduled:
 	curl "http://localhost:8787/__scheduled?cron=0+*/12+*+*+*"
@@ -55,4 +67,5 @@ help:
 	@echo "  make migrate    - apply D1 migrations to the local database"
 	@echo "  make wipe       - wipe all stored items from the local database"
 	@echo "  make score      - score a headline via the AI model (e.g. make score SCORE_TEXT=\"RTX 5090 review\")"
+	@echo "  make qa         - run lint, format check, and tests"
 	@echo "  make help       - show this help"

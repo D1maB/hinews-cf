@@ -1,5 +1,7 @@
 export function normalizeTitle(title: unknown): string {
-  return String(title ?? '').trim().toLowerCase();
+  return String(title ?? '')
+    .trim()
+    .toLowerCase();
 }
 
 export function dedupByTitle<T extends { title: string }>(items: T[]): T[] {
@@ -21,7 +23,9 @@ export function dedupByUrl<T extends { url: string }>(items: T[]): T[] {
   });
 }
 
-export function dedupItems<T extends { url: string; title: string }>(items: T[]): T[] {
+export function dedupItems<T extends { url: string; title: string }>(
+  items: T[],
+): T[] {
   const seenUrls = new Set<string>();
   const seenTitles = new Set<string>();
   return items.filter((item) => {

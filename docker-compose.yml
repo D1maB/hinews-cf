@@ -1,5 +1,4 @@
-version: "3.8"
-
+version: '3.8'
 services:
   app:
     build:
@@ -7,9 +6,9 @@ services:
       dockerfile: docker/Dockerfile
     command: sh -c "npx wrangler d1 migrations apply DB --local --config wrangler.dev.toml && npx wrangler dev --config wrangler.dev.toml --ip 0.0.0.0 --port 8787 --test-scheduled"
     ports:
-      - "8787:8787"
+      - '8787:8787'
     environment:
-      CI: "true"
+      CI: 'true'
       SCORE_BASE_URL: ${SCORE_BASE_URL:-http://host.docker.internal:11435}
       SCORE_MODEL: ${SCORE_MODEL:-llama3.2:1b}
     volumes:
@@ -17,43 +16,25 @@ services:
       - node_modules:/app/node_modules
       - feeds:/app/feeds:ro
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
     stdin_open: true
     tty: true
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8787"]
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:8787']
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
 
-  test:
+  tools:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    command: npx tsx --test
-    profiles:
-      - test
     volumes:
       - .:/app
       - node_modules:/app/node_modules
     environment:
-      CI: "true"
-
-  deploy:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-    command: sh -c "npx wrangler d1 migrations apply DB --remote && npx wrangler deploy"
-    profiles:
-      - deploy
-    volumes:
-      - .:/app
-      - node_modules:/app/node_modules
-    environment:
-      CI: "true"
-      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
-      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
+      CI: 'true'
 
   download-feeds:
     build:

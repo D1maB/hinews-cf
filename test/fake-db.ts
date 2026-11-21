@@ -26,10 +26,16 @@ class FakeStatement {
       return { value };
     }
 
-    if (this.sql.toLowerCase().includes('from items') && this.sql.toLowerCase().includes('where')) {
+    if (
+      this.sql.toLowerCase().includes('from items') &&
+      this.sql.toLowerCase().includes('where')
+    ) {
       const key = this.args[0];
       const rows = [...this.database.rows.values()];
-      const row = this.database.rows.get(String(key)) ?? rows.find((candidate) => String(candidate.id) === String(key)) ?? null;
+      const row =
+        this.database.rows.get(String(key)) ??
+        rows.find((candidate) => String(candidate.id) === String(key)) ??
+        null;
       if (row) {
         this.database.scans += 1;
       }
@@ -51,7 +57,10 @@ class FakeStatement {
     this.database.reads += 1;
 
     if (this.sql.toLowerCase().includes('meta')) {
-      const results = [...this.database.meta.entries()].map(([key, value]) => ({ key, value }));
+      const results = [...this.database.meta.entries()].map(([key, value]) => ({
+        key,
+        value,
+      }));
       this.database.scans += results.length;
       return { results };
     }
@@ -59,7 +68,9 @@ class FakeStatement {
     const results = [...this.database.rows.values()].sort(
       (left, right) =>
         left.feed_id.localeCompare(right.feed_id) ||
-        String(right.published_at ?? '').localeCompare(String(left.published_at ?? '')),
+        String(right.published_at ?? '').localeCompare(
+          String(left.published_at ?? ''),
+        ),
     );
 
     this.database.scans += results.length;
@@ -116,7 +127,10 @@ class FakeStatement {
       return { meta: { changes: 1 } };
     }
 
-    if (this.sql.toLowerCase().includes('update') && this.sql.toLowerCase().includes('scheduled_at')) {
+    if (
+      this.sql.toLowerCase().includes('update') &&
+      this.sql.toLowerCase().includes('scheduled_at')
+    ) {
       const [scheduledAt, url] = this.args;
       const row = this.database.rows.get(url);
       if (row) {
@@ -126,7 +140,10 @@ class FakeStatement {
       return { meta: { changes: row ? 1 : 0 } };
     }
 
-    if (this.sql.toLowerCase().includes('update') && this.sql.toLowerCase().includes('published')) {
+    if (
+      this.sql.toLowerCase().includes('update') &&
+      this.sql.toLowerCase().includes('published')
+    ) {
       const [url] = this.args;
       const row = this.database.rows.get(url);
       if (row) {
@@ -136,7 +153,10 @@ class FakeStatement {
       return { meta: { changes: row ? 1 : 0 } };
     }
 
-    if (this.sql.toLowerCase().includes('update') && this.sql.toLowerCase().includes('status')) {
+    if (
+      this.sql.toLowerCase().includes('update') &&
+      this.sql.toLowerCase().includes('status')
+    ) {
       for (const row of this.database.rows.values()) {
         if (row.status == null || row.status === 'new') {
           row.status = 'scheduled';
@@ -160,14 +180,22 @@ class FakeStatement {
       throw new Error(`Unexpected SQL: ${this.sql}`);
     }
 
-    const [feedId, feedName, title, url, publishedAt, score, scheduledAt] = this.args;
+    const [feedId, feedName, title, url, publishedAt, score, scheduledAt] =
+      this.args;
 
     if (this.database.rows.has(url)) {
       return { meta: { changes: 0 } };
     }
 
     for (const row of this.database.rows.values()) {
-      if (String(row.title ?? '').trim().toLowerCase() === String(title ?? '').trim().toLowerCase()) {
+      if (
+        String(row.title ?? '')
+          .trim()
+          .toLowerCase() ===
+        String(title ?? '')
+          .trim()
+          .toLowerCase()
+      ) {
         return { meta: { changes: 0 } };
       }
     }
@@ -203,7 +231,8 @@ export function createFakeDb(rows = []) {
     reads: 0,
     scans: 0,
     prepare: (sql) => new FakeStatement(db, sql),
-    batch: (statements) => Promise.all(statements.map((statement) => statement.run())),
+    batch: (statements) =>
+      Promise.all(statements.map((statement) => statement.run())),
   };
 
   return db;

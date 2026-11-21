@@ -13,39 +13,61 @@ export interface ScoreOptions {
   SCORE_MODEL?: string;
 }
 
-export function getScoreOptions(env: Record<string, unknown> = {}): { baseUrl: string; model: string } {
+export function getScoreOptions(env: Record<string, unknown> = {}): {
+  baseUrl: string;
+  model: string;
+} {
   return {
     baseUrl: (env?.SCORE_BASE_URL as string) || DEFAULT_SCORE_BASE_URL,
     model: (env?.SCORE_MODEL as string) || DEFAULT_SCORE_MODEL,
   };
 }
 
-export async function scoreTitle(title: string, options: { baseUrl?: string; model?: string } = {}): Promise<number | null> {
+export async function scoreTitle(
+  title: string,
+  options: { baseUrl?: string; model?: string } = {},
+): Promise<number | null> {
   if (!options.baseUrl || !options.model) {
     return null;
   }
   return scoreWithAi({ title, baseUrl: options.baseUrl, model: options.model });
 }
 
-async function scoreWithAi({ title, baseUrl, model }: { title: string; baseUrl: string; model: string }): Promise<number | null> {
+async function scoreWithAi({
+  title,
+  baseUrl,
+  model,
+}: {
+  title: string;
+  baseUrl: string;
+  model: string;
+}): Promise<number | null> {
   try {
-    const response = await fetch(`${baseUrl.replace(/\/+$/, '')}/v1/chat/completions`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: SCORE_SYSTEM_PROMPT },
-          { role: 'user', content: `Score this headline for reader interest: ${title}` },
-        ],
-      }),
-    });
+    const response = await fetch(
+      `${baseUrl.replace(/\/+$/, '')}/v1/chat/completions`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: SCORE_SYSTEM_PROMPT },
+            {
+              role: 'user',
+              content: `Score this headline for reader interest: ${title}`,
+            },
+          ],
+        }),
+      },
+    );
 
     if (!response.ok) {
       return null;
     }
 
-    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
     const content = data?.choices?.[0]?.message?.content ?? '';
     return parseScore(content);
   } catch {
@@ -54,7 +76,9 @@ async function scoreWithAi({ title, baseUrl, model }: { title: string; baseUrl: 
 }
 
 function parseScore(content: string): number | null {
-  const cleaned = String(content ?? '').replace(/```json|```/gi, '').trim();
+  const cleaned = String(content ?? '')
+    .replace(/```json|```/gi, '')
+    .trim();
   const parsed = JSON.parse(cleaned);
   const score = Number(parsed?.score);
 

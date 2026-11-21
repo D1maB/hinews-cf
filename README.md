@@ -24,18 +24,18 @@ Copy the example environment file and fill in your credentials:
 cp .env.example .env
 ```
 
-| Variable                | Purpose                                              |
-| ----------------------- | ---------------------------------------------------- |
-| `CLOUDFLARE_API_TOKEN`  | API token with the Edit Cloudflare Workers template   |
-| `CLOUDFLARE_ACCOUNT_ID` | Optional, when the token can access multiple accounts |
-| `BSKY_ENABLED`          | Set to `true` to publish headlines to Bluesky        |
-| `BSKY_HANDLE`           | Bluesky handle (e.g. user.bsky.social) used to publish |
-| `BSKY_APP_PASSWORD`     | Bluesky app password used to publish                 |
-| `TELEGRAM_ENABLED`      | Set to `true` to publish headlines to Telegram      |
-| `TELEGRAM_BOT_TOKEN`    | Telegram bot token used to publish                  |
-| `TELEGRAM_CHAT_ID`      | Telegram chat/channel id used to publish           |
+| Variable                | Purpose                                                                                              |
+| ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`  | API token with the Edit Cloudflare Workers template                                                  |
+| `CLOUDFLARE_ACCOUNT_ID` | Optional, when the token can access multiple accounts                                                |
+| `BSKY_ENABLED`          | Set to `true` to publish headlines to Bluesky                                                        |
+| `BSKY_HANDLE`           | Bluesky handle (e.g. user.bsky.social) used to publish                                               |
+| `BSKY_APP_PASSWORD`     | Bluesky app password used to publish                                                                 |
+| `TELEGRAM_ENABLED`      | Set to `true` to publish headlines to Telegram                                                       |
+| `TELEGRAM_BOT_TOKEN`    | Telegram bot token used to publish                                                                   |
+| `TELEGRAM_CHAT_ID`      | Telegram chat/channel id used to publish                                                             |
 | `SCORE_BASE_URL`        | AI scoring endpoint, e.g. Ollama (`http://localhost:11434/v1`) locally or a remote API in production |
-| `SCORE_MODEL`           | AI model used for headline scoring, e.g. `llama3.2:1b` locally or `gpt-4o-mini` in production |
+| `SCORE_MODEL`           | AI model used for headline scoring, e.g. `llama3.2:1b` locally or `gpt-4o-mini` in production        |
 
 `.env` is ignored by Git and Docker. `docker-compose` loads it automatically when run
 from the repository root. Commit only `.env.example`.
@@ -89,6 +89,7 @@ Common tasks are also available as Makefile targets that wrap the same Compose c
 make up       # build and start the worker
 make feeds    # download the RSS cache
 make test     # run the test suite
+make qa       # run lint, format check, and tests
 make logs     # follow the worker logs
 make down     # stop and remove the containers
 ```
@@ -170,11 +171,11 @@ handler manually from the Cloudflare dashboard.
 ├── docker/
 │   └── Dockerfile              # Alpine image with glibc for workerd
 ├── migrations/                 # D1 schema migrations
-├── scripts/download-feeds.mjs  # Downloads RSS XML into the feeds volume
-├── src/feeds.js                # Feed list and RSS parsing service
-├── src/ingest.js               # Parses feeds and stores new items
-├── src/store.js                # D1 reads and deduplicating writes
-├── src/index.js                # HTTP and scheduled entry points
+├── scripts/download-feeds.ts   # Downloads RSS XML into the feeds volume
+├── src/feeds.ts                # Feed list and RSS parsing service
+├── src/ingest.ts               # Parses feeds and stores new items
+├── src/store.ts                # D1 reads and deduplicating writes
+├── src/index.ts                # HTTP and scheduled entry points
 ├── test/                       # Unit tests and in-memory D1 helper
 ├── .dockerignore               # Build context exclusions (must stay at the context root)
 ├── .env.example                # Template for local secrets

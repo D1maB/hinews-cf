@@ -42,7 +42,17 @@ function localAssets() {
 }
 
 test('renders every stored item from the database', async (t) => {
-  t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ choices: [{ message: { content: '{"score": 82}' } }] }), { status: 200 }));
+  t.mock.method(
+    globalThis,
+    'fetch',
+    async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '{"score": 82}' } }],
+        }),
+        { status: 200 },
+      ),
+  );
   const rows = Array.from({ length: 7 }, (_, index) => ({
     feed_id: 'kitguru',
     feed_name: 'KitGuru',
@@ -51,7 +61,11 @@ test('renders every stored item from the database', async (t) => {
     published_at: '2024-01-01T00:00:00.000Z',
   }));
 
-  const response = await worker.fetch(REQUEST, { DB: createFakeDb(rows), SCORE_BASE_URL: 'http://localhost:11434/v1', SCORE_MODEL: 'llama3.2:1b' });
+  const response = await worker.fetch(REQUEST, {
+    DB: createFakeDb(rows),
+    SCORE_BASE_URL: 'http://localhost:11434/v1',
+    SCORE_MODEL: 'llama3.2:1b',
+  });
   const html = await response.text();
 
   assert.equal(response.status, 200);
@@ -85,14 +99,30 @@ test('renders all stored items in a single list with source notes sorted by sche
     },
   ]);
 
-  const env = { DB: db, SCORE_BASE_URL: 'http://localhost:11434/v1', SCORE_MODEL: 'llama3.2:1b' };
-  t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ choices: [{ message: { content: '{"score": 82}' } }] }), { status: 200 }));
+  const env = {
+    DB: db,
+    SCORE_BASE_URL: 'http://localhost:11434/v1',
+    SCORE_MODEL: 'llama3.2:1b',
+  };
+  t.mock.method(
+    globalThis,
+    'fetch',
+    async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '{"score": 82}' } }],
+        }),
+        { status: 200 },
+      ),
+  );
 
   const html = await (await worker.fetch(REQUEST, env)).text();
 
   assert.doesNotMatch(html, /<section class="feed">/);
 
-  const items = [...html.matchAll(/<li>[\s\S]*?<\/li>/g)].map((match) => match[0]);
+  const items = [...html.matchAll(/<li>[\s\S]*?<\/li>/g)].map(
+    (match) => match[0],
+  );
   assert.equal(items.length, 2);
   assert.match(items[0], /Source: Wccftech/);
   assert.match(items[0], /Status: scheduled/);
@@ -107,8 +137,23 @@ test('renders an empty page when the database has no items yet', async (t) => {
   t.mock.method(console, 'log', () => {});
   const db = createFakeDb();
   const assets = localAssets();
-  const env = { ...assets, DB: db, SCORE_BASE_URL: 'http://localhost:11434/v1', SCORE_MODEL: 'llama3.2:1b' };
-  t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ choices: [{ message: { content: '{"score": 82}' } }] }), { status: 200 }));
+  const env = {
+    ...assets,
+    DB: db,
+    SCORE_BASE_URL: 'http://localhost:11434/v1',
+    SCORE_MODEL: 'llama3.2:1b',
+  };
+  t.mock.method(
+    globalThis,
+    'fetch',
+    async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '{"score": 82}' } }],
+        }),
+        { status: 200 },
+      ),
+  );
 
   const first = await (await worker.fetch(REQUEST, env)).text();
   const fetchesAfterFirstRequest = assets.fetches();
@@ -126,8 +171,23 @@ test('renders an empty page when the database has no items yet', async (t) => {
 test('scheduled runs store fresh items', async (t) => {
   t.mock.method(console, 'log', () => {});
   const db = createFakeDb();
-  const env = { ...localAssets(), DB: db, SCORE_BASE_URL: 'http://localhost:11434/v1', SCORE_MODEL: 'llama3.2:1b' };
-  t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ choices: [{ message: { content: '{"score": 82}' } }] }), { status: 200 }));
+  const env = {
+    ...localAssets(),
+    DB: db,
+    SCORE_BASE_URL: 'http://localhost:11434/v1',
+    SCORE_MODEL: 'llama3.2:1b',
+  };
+  t.mock.method(
+    globalThis,
+    'fetch',
+    async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '{"score": 82}' } }],
+        }),
+        { status: 200 },
+      ),
+  );
   let pending;
 
   worker.scheduled({ cron: '0 */12 * * *' }, env, {
@@ -155,8 +215,23 @@ test('scheduled runs append fresh items without clearing existing ones', async (
       score: 60,
     },
   ]);
-  const env = { ...localAssets(), DB: db, SCORE_BASE_URL: 'http://localhost:11434/v1', SCORE_MODEL: 'llama3.2:1b' };
-  t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ choices: [{ message: { content: '{"score": 82}' } }] }), { status: 200 }));
+  const env = {
+    ...localAssets(),
+    DB: db,
+    SCORE_BASE_URL: 'http://localhost:11434/v1',
+    SCORE_MODEL: 'llama3.2:1b',
+  };
+  t.mock.method(
+    globalThis,
+    'fetch',
+    async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '{"score": 82}' } }],
+        }),
+        { status: 200 },
+      ),
+  );
   let pending;
 
   worker.scheduled({ cron: '0 */12 * * *' }, env, {

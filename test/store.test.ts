@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { backfillScores, clearItems, deletePublished, getItemById, getItemByUrl } from '../src/store.ts';
+import {
+  backfillScores,
+  clearItems,
+  deletePublished,
+  getItemById,
+  getItemByUrl,
+} from '../src/store.ts';
 import { createFakeDb } from './fake-db.ts';
 
 test('schedules unscheduled items across one 12 hour window from the last scheduled time', async (t) => {

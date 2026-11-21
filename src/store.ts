@@ -38,7 +38,9 @@ export async function saveItems(db: any, items: any[]): Promise<number> {
 
   const { results = [] } = await db.prepare(SELECT_URLS).all();
   const existingUrls = new Set((results as any[]).map((row) => row.url));
-  const existingTitles = new Set((results as any[]).map((row) => normalizeTitle(row.title)));
+  const existingTitles = new Set(
+    (results as any[]).map((row) => normalizeTitle(row.title)),
+  );
 
   const seenUrls = new Set<string>();
   const seenTitles = new Set<string>();
@@ -62,11 +64,23 @@ export async function saveItems(db: any, items: any[]): Promise<number> {
   const statements = newItems.map((item: any) =>
     db
       .prepare(INSERT_ITEM)
-      .bind(item.feedId, item.feedName, item.title, item.url, item.publishedAt, item.score, item.scheduledAt ?? null, item.description ?? null),
+      .bind(
+        item.feedId,
+        item.feedName,
+        item.title,
+        item.url,
+        item.publishedAt,
+        item.score,
+        item.scheduledAt ?? null,
+        item.description ?? null,
+      ),
   );
 
   const results2 = await db.batch(statements);
-  return (results2 as any[]).reduce((total: number, result: any) => total + (result.meta?.changes ?? 0), 0);
+  return (results2 as any[]).reduce(
+    (total: number, result: any) => total + (result.meta?.changes ?? 0),
+    0,
+  );
 }
 
 export async function listItems(db: any): Promise<any[]> {
@@ -90,15 +104,24 @@ const SELECT_SCHEDULED_AT = `SELECT scheduled_at FROM items`;
 
 export async function getLastScheduledAt(db: any): Promise<string | null> {
   const { results = [] } = await db.prepare(SELECT_SCHEDULED_AT).all();
-  const values = (results as any[]).map((row) => row.scheduled_at).filter(Boolean);
+  const values = (results as any[])
+    .map((row) => row.scheduled_at)
+    .filter(Boolean);
   if (values.length === 0) return null;
-  return values.reduce((latest: string, value: string) => (value > latest ? value : latest));
+  return values.reduce((latest: string, value: string) =>
+    value > latest ? value : latest,
+  );
 }
 
 export async function getDueItems(db: any): Promise<any[]> {
   const items = await listItems(db);
   const now = new Date().toISOString();
-  return items.filter((item: any) => item.status === 'scheduled' && item.scheduled_at && item.scheduled_at <= now);
+  return items.filter(
+    (item: any) =>
+      item.status === 'scheduled' &&
+      item.scheduled_at &&
+      item.scheduled_at <= now,
+  );
 }
 
 export async function getItemByUrl(db: any, url: string): Promise<any> {
@@ -109,15 +132,23 @@ export async function getItemById(db: any, id: number | string): Promise<any> {
   return db.prepare(SELECT_ITEM_BY_ID).bind(id).first();
 }
 
-export const MARK_ITEM_PUBLISHED = "UPDATE items SET status = 'published' WHERE url = ?";
+export const MARK_ITEM_PUBLISHED =
+  "UPDATE items SET status = 'published' WHERE url = ? AND status = 'scheduled'";
 
-export async function markPublished(db: any, url: string): Promise<void> {
-  await db.prepare(MARK_ITEM_PUBLISHED).bind(url).run();
+export async function markPublished(db: any, url: string): Promise<number> {
+  const result = await db.prepare(MARK_ITEM_PUBLISHED).bind(url).run();
+  return result.meta?.changes ?? 0;
 }
 
-export function buildScheduledAt(baseTime: number, index: number, itemCount: number): string {
+export function buildScheduledAt(
+  baseTime: number,
+  index: number,
+  itemCount: number,
+): string {
   const slotMinutes = itemCount > 0 ? SCHEDULE_WINDOW_MINUTES / itemCount : 0;
-  const scheduledTime = new Date(baseTime + (index + 1) * slotMinutes * 60 * 1000);
+  const scheduledTime = new Date(
+    baseTime + (index + 1) * slotMinutes * 60 * 1000,
+  );
   return scheduledTime.toISOString();
 }
 
@@ -135,22 +166,40 @@ export async function deletePublished(db: any): Promise<number> {
   return result.meta?.changes ?? 0;
 }
 
-export async function backfillScores(db: any, options: any = {}): Promise<void> {
+export async function backfillScores(
+  db: any,
+  options: any = {},
+): Promise<void> {
   const { results = [] } = await db.prepare(SELECT_UNSCORED).all();
 
   for (const row of results as any[]) {
-    await db.prepare(UPDATE_SCORE).bind(await scoreTitle(row.title, options), row.url).run();
+    await db
+      .prepare(UPDATE_SCORE)
+      .bind(await scoreTitle(row.title, options), row.url)
+      .run();
   }
 
-  await db.prepare('DELETE FROM items WHERE score IS NOT NULL AND score <= ?').bind(MIN_SCORE).run();
-  await db.prepare("UPDATE items SET status = 'scheduled' WHERE status IS NULL OR status = 'new'").run();
+  await db
+    .prepare('DELETE FROM items WHERE score IS NOT NULL AND score <= ?')
+    .bind(MIN_SCORE)
+    .run();
+  await db
+    .prepare(
+      "UPDATE items SET status = 'scheduled' WHERE status IS NULL OR status = 'new'",
+    )
+    .run();
 
-  const { results: allRows = [] } = await db.prepare('SELECT url, scheduled_at FROM items').all();
+  const { results: allRows = [] } = await db
+    .prepare('SELECT url, scheduled_at FROM items')
+    .all();
   const unscheduled = (allRows as any[]).filter((row) => !row.scheduled_at);
   const last = await getLastScheduledAt(db);
   const baseTime = last ? new Date(last).getTime() : Date.now();
   for (let index = 0; index < unscheduled.length; index += 1) {
     const scheduledAt = buildScheduledAt(baseTime, index, unscheduled.length);
-    await db.prepare("UPDATE items SET scheduled_at = ? WHERE url = ?").bind(scheduledAt, unscheduled[index].url).run();
+    await db
+      .prepare('UPDATE items SET scheduled_at = ? WHERE url = ?')
+      .bind(scheduledAt, unscheduled[index].url)
+      .run();
   }
 }

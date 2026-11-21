@@ -13,7 +13,9 @@ export function escapeHtml(value: unknown): string {
 export function safeUrl(value: unknown): string {
   try {
     const url = new URL(String(value));
-    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : '#';
+    return url.protocol === 'http:' || url.protocol === 'https:'
+      ? url.href
+      : '#';
   } catch {
     return '#';
   }
@@ -24,7 +26,11 @@ export function formatDate(value: unknown): string {
   const date = new Date(value as any);
   return Number.isNaN(date.getTime())
     ? ''
-    : date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    : date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
 }
 
 export function formatSyncDate(value: unknown): string {
@@ -39,15 +45,33 @@ export function formatSyncDate(value: unknown): string {
 export function renderItem(item: any): string {
   const published = formatDate(item.published_at);
   const scoreValue = item.score != null ? Number(item.score) : null;
-  const scoreClass = scoreValue == null ? '' : scoreValue >= 80 ? ' high' : scoreValue >= 60 ? ' mid' : '';
-  const score = scoreValue != null ? `<span class="score${scoreClass}">${escapeHtml(String(scoreValue))}</span>` : '';
+  const scoreClass =
+    scoreValue == null
+      ? ''
+      : scoreValue >= 80
+        ? ' high'
+        : scoreValue >= 60
+          ? ' mid'
+          : '';
+  const score =
+    scoreValue != null
+      ? `<span class="score${scoreClass}">${escapeHtml(String(scoreValue))}</span>`
+      : '';
   const time = published ? `<time>${escapeHtml(published)}</time>` : '';
   const scheduledAt = formatSyncDate(item.scheduled_at);
-  const scheduled = scheduledAt ? `<time class="scheduled">Scheduled: ${escapeHtml(scheduledAt)}</time>` : '';
+  const scheduled = scheduledAt
+    ? `<time class="scheduled">Scheduled: ${escapeHtml(scheduledAt)}</time>`
+    : '';
 
-  const source = item.feed_name ? `<div class="source">Source: ${escapeHtml(item.feed_name)}</div>` : '';
-  const status = item.status ? `<div class="status">Status: ${escapeHtml(item.status)}</div>` : '';
-  const excerpt = item.description ? `<div class="excerpt">${escapeHtml(item.description)}</div>` : '';
+  const source = item.feed_name
+    ? `<div class="source">Source: ${escapeHtml(item.feed_name)}</div>`
+    : '';
+  const status = item.status
+    ? `<div class="status">Status: ${escapeHtml(item.status)}</div>`
+    : '';
+  const excerpt = item.description
+    ? `<div class="excerpt">${escapeHtml(item.description)}</div>`
+    : '';
 
   return `<li>
   <a href="${escapeHtml(safeUrl(item.url))}">${escapeHtml(item.title)}</a>
@@ -58,8 +82,16 @@ export function renderItem(item: any): string {
 </li>`;
 }
 
-export function renderPage(feeds: any[], total: number, lastSync: any = null, items: any[] = []): string {
-  const list = items.length > 0 ? `<ul class="items">${items.map((item) => renderItem(item)).join('')}</ul>` : '<p class="empty">No stored items yet.</p>';
+export function renderPage(
+  feeds: any[],
+  total: number,
+  lastSync: any = null,
+  items: any[] = [],
+): string {
+  const list =
+    items.length > 0
+      ? `<ul class="items">${items.map((item) => renderItem(item)).join('')}</ul>`
+      : '<p class="empty">No stored items yet.</p>';
   return `<!doctype html>
 <html lang="en">
 <head>

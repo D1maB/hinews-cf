@@ -7,15 +7,17 @@ import { createFakeDb } from './fake-db.ts';
 const originalFetch = globalThis.fetch;
 
 function mockFetch(responses) {
-  globalThis.fetch = async (...args) => {
+  globalThis.fetch = async () => {
     const response = responses.shift();
     if (!response) {
       throw new Error('No more mocked responses');
     }
-    return response instanceof Response ? response : new Response(JSON.stringify(response), {
-      status: response.status ?? 200,
-      headers: { 'content-type': 'application/json' },
-    });
+    return response instanceof Response
+      ? response
+      : new Response(JSON.stringify(response), {
+          status: response.status ?? 200,
+          headers: { 'content-type': 'application/json' },
+        });
   };
 }
 
@@ -99,17 +101,31 @@ test('publishScheduled posts to Bluesky when configured', async (t) => {
     calls.push({ url: callUrl, init });
 
     if (callUrl.includes('app.bsky.actor.createSession')) {
-      return new Response(JSON.stringify({ accessJwt: 'bsky-access-token', refreshJwt: 'bsky-refresh-token' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          accessJwt: 'bsky-access-token',
+          refreshJwt: 'bsky-refresh-token',
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      );
     }
 
     if (callUrl.includes('app.bsky.feed.post')) {
-      return new Response(JSON.stringify({ ok: true, result: { message: { uri: 'at://did:plc:test/app.bsky.feed.post/1' } } }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            message: { uri: 'at://did:plc:test/app.bsky.feed.post/1' },
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      );
     }
 
     throw new Error(`Unexpected fetch: ${callUrl}`);
@@ -122,12 +138,18 @@ test('publishScheduled posts to Bluesky when configured', async (t) => {
 
   assert.ok(calls[0].url.includes('app.bsky.actor.createSession'));
   assert.equal(calls[0].init.method, 'POST');
-  assert.deepEqual(JSON.parse(calls[0].init.body), { identifier: 'hinews.bsky.social', password: 'app-password' });
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    identifier: 'hinews.bsky.social',
+    password: 'app-password',
+  });
 
   assert.ok(calls[1].url.includes('app.bsky.feed.post'));
   assert.equal(calls[1].init.method, 'POST');
   assert.equal(calls[1].init.headers.authorization, 'Bearer bsky-access-token');
-  assert.equal(JSON.parse(calls[1].init.body).text, 'Test story\n\nA description worth reading.\n\nhttps://example.com/test');
+  assert.equal(
+    JSON.parse(calls[1].init.body).text,
+    'Test story\n\nA description worth reading.\n\nhttps://example.com/test',
+  );
 
   restoreFetch();
 });
@@ -222,10 +244,16 @@ test('publishScheduled does not mark published when Bluesky post fails', async (
     const callUrl = String(url);
 
     if (callUrl.includes('app.bsky.actor.createSession')) {
-      return new Response(JSON.stringify({ accessJwt: 'bsky-access-token', refreshJwt: 'bsky-refresh-token' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          accessJwt: 'bsky-access-token',
+          refreshJwt: 'bsky-refresh-token',
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      );
     }
 
     return new Response(JSON.stringify({ error: 'Bluesky unavailable' }), {

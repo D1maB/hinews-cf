@@ -26,12 +26,18 @@ async function postToTelegram(env: any, item: any): Promise<boolean> {
   const response = await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: false }),
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      disable_web_page_preview: false,
+    }),
   });
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(`Telegram sendMessage failed (${response.status}): ${body}`);
+    throw new Error(
+      `Telegram sendMessage failed (${response.status}): ${body}`,
+    );
   }
 
   console.log(`Published to Telegram: ${item.title} (${item.url})`);
@@ -55,15 +61,20 @@ async function postToBluesky(env: any, item: any): Promise<boolean> {
   let session = bskSession;
 
   if (!session || session.expiresAt <= Date.now()) {
-    const sessionResponse = await fetch(`${BSKY_API}/xrpc/app.bsky.actor.createSession`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ identifier: handle, password }),
-    });
+    const sessionResponse = await fetch(
+      `${BSKY_API}/xrpc/app.bsky.actor.createSession`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ identifier: handle, password }),
+      },
+    );
 
     if (!sessionResponse.ok) {
       const body = await sessionResponse.text();
-      throw new Error(`Bluesky session creation failed (${sessionResponse.status}): ${body}`);
+      throw new Error(
+        `Bluesky session creation failed (${sessionResponse.status}): ${body}`,
+      );
     }
 
     const created = await sessionResponse.json();
@@ -94,19 +105,26 @@ async function postToBluesky(env: any, item: any): Promise<boolean> {
 }
 
 async function publishToSocials(env: any, item: any): Promise<boolean> {
-  const results = await Promise.allSettled([postToTelegram(env, item), postToBluesky(env, item)]);
-  return results.some((result) => result.status === 'fulfilled' && result.value === true);
+  const results = await Promise.allSettled([
+    postToTelegram(env, item),
+    postToBluesky(env, item),
+  ]);
+  return results.some(
+    (result) => result.status === 'fulfilled' && result.value === true,
+  );
 }
 
-export async function publishScheduled(env: any): Promise<{ published: number }> {
+export async function publishScheduled(
+  env: any,
+): Promise<{ published: number }> {
   const due = await getDueItems(env.DB);
   let publishedCount = 0;
 
   for (const item of due) {
     const published = await publishToSocials(env, item);
     if (published) {
-      await markPublished(env.DB, item.url);
-      publishedCount += 1;
+      const changed = await markPublished(env.DB, item.url);
+      if (changed > 0) publishedCount += 1;
     }
   }
 

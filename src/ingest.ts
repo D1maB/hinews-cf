@@ -1,8 +1,15 @@
 import { loadFeeds, toIsoDate } from './feeds.js';
-import { saveItems, setLastSync, getLastScheduledAt, buildScheduledAt } from './store.js';
+import {
+  saveItems,
+  setLastSync,
+  getLastScheduledAt,
+  buildScheduledAt,
+} from './store.js';
 import { dedupItems } from './dedup.js';
 
-export async function ingestFeeds(env: Record<string, unknown>): Promise<{ inserted: number; feeds: any; items: any[] }> {
+export async function ingestFeeds(
+  env: Record<string, unknown>,
+): Promise<{ inserted: number; feeds: any; items: any[] }> {
   const feeds = await loadFeeds(env);
 
   for (const feed of feeds) {
@@ -31,7 +38,9 @@ export async function ingestFeeds(env: Record<string, unknown>): Promise<{ inser
   });
 
   const lastScheduledAt = await getLastScheduledAt(env.DB as any);
-  const baseTime = lastScheduledAt ? new Date(lastScheduledAt).getTime() : Date.now();
+  const baseTime = lastScheduledAt
+    ? new Date(lastScheduledAt).getTime()
+    : Date.now();
   const prepared = deduped.map((item: any, index: number) => ({
     ...item,
     scheduledAt: buildScheduledAt(baseTime, index, deduped.length),
