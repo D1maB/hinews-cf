@@ -191,13 +191,23 @@ async function fetchRemoteFeed(feed: { url: string }): Promise<string> {
 export async function loadFeed(
   feed: FeedConfig,
   env: Record<string, unknown>,
-): Promise<{
-  id: string;
-  name: string;
-  url: string;
-  items: unknown[];
-  error?: string;
-}> {
+): Promise<
+  | {
+      id: string;
+      name: string;
+      url: string;
+      items: unknown[];
+      status: 'ok';
+    }
+  | {
+      id: string;
+      name: string;
+      url: string;
+      items: [];
+      status: 'error';
+      error: string;
+    }
+> {
   try {
     const xml = env.ASSETS
       ? await readLocalFeed(env.ASSETS as unknown, feed)
@@ -209,13 +219,17 @@ export async function loadFeed(
 }
 
 export async function loadFeeds(env: Record<string, unknown>): Promise<
-  Array<{
-    id: string;
-    name: string;
-    url: string;
-    items: unknown[];
-    error?: string;
-  }>
+  Array<
+    | { id: string; name: string; url: string; items: unknown[]; status: 'ok' }
+    | {
+        id: string;
+        name: string;
+        url: string;
+        items: [];
+        status: 'error';
+        error: string;
+      }
+  >
 > {
   const feeds = getFeeds(env);
   const results = await Promise.allSettled(
@@ -227,6 +241,7 @@ export async function loadFeeds(env: Record<string, unknown>): Promise<
       : {
           ...feeds[index],
           items: [],
+          status: 'error',
           error:
             result.reason instanceof Error
               ? result.reason.message

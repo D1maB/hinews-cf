@@ -13,7 +13,7 @@ export async function ingestFeeds(
   const feeds = await loadFeeds(env);
 
   for (const feed of feeds) {
-    if (feed.error) {
+    if (feed.status === 'error') {
       console.error(`Failed to load ${feed.name}: ${feed.error}`);
     }
   }
