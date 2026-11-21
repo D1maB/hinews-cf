@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import worker from '../src/index.js';
-import { FEEDS } from '../src/feeds.js';
-import { createFakeDb } from './fake-db.js';
+import worker from '../src/index.ts';
+import { FEEDS } from '../src/feeds.ts';
+import { createFakeDb } from './fake-db.ts';
 
 const REQUEST = new Request('https://example.com/');
 

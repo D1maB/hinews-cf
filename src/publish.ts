@@ -6,39 +6,19 @@ const BSKY_API = 'https://bsky.social';
 const BSKY_POST_TEXT_LIMIT = 300;
 const BSKY_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
-let bskSession = null;
+let bskSession: any = null;
 
-/**
- * Returns whether the publisher with the given environment flag is enabled.
- *
- * @param {Record<string, unknown>} env
- * @param {string} key
- * @returns {boolean}
- */
-function isPublisherEnabled(env, key) {
+function isPublisherEnabled(env: any, key: string): boolean {
   const value = env[key];
   return value === true || value === 'true';
 }
 
-/**
- * Posts a single item to the configured Telegram channel.
- *
- * @param {Record<string, unknown>} env
- * @param {{ title: string, url: string }} item
- * @returns {Promise<boolean>}
- */
-async function postToTelegram(env, item) {
+async function postToTelegram(env: any, item: any): Promise<boolean> {
   const enabled = isPublisherEnabled(env, 'TELEGRAM_ENABLED');
   const token = env.TELEGRAM_BOT_TOKEN;
   const chatId = env.TELEGRAM_CHAT_ID;
 
-  if (!enabled) {
-    return false;
-  }
-
-  if (!token || !chatId) {
-    return false;
-  }
+  if (!enabled || !token || !chatId) return false;
 
   const text = item.description
     ? `${item.title}\n\n${item.description}\n\n${item.url}`
@@ -55,44 +35,22 @@ async function postToTelegram(env, item) {
   }
 
   console.log(`Published to Telegram: ${item.title} (${item.url})`);
-
   return true;
 }
 
-/**
- * Builds the Bluesky post text for an item, staying within the 300 character limit.
- *
- * @param {{ title: string, description?: string | null, url: string }} item
- * @returns {string}
- */
-function buildBlueskyText(item) {
+function buildBlueskyText(item: any): string {
   const text = item.description
     ? `${item.title}\n\n${item.description}\n\n${item.url}`
     : `${item.title}\n\n${item.url}`;
-
   return truncateToSentence(text, BSKY_POST_TEXT_LIMIT);
 }
 
-/**
- * Posts a single item to the authenticated Bluesky account. Does nothing when
- * the Bluesky handle or app password is not configured.
- *
- * @param {Record<string, unknown>} env
- * @param {{ title: string, description?: string | null, url: string }} item
- * @returns {Promise<boolean>}
- */
-async function postToBluesky(env, item) {
+async function postToBluesky(env: any, item: any): Promise<boolean> {
   const enabled = isPublisherEnabled(env, 'BSKY_ENABLED');
   const handle = env.BSKY_HANDLE;
   const password = env.BSKY_APP_PASSWORD;
 
-  if (!enabled) {
-    return false;
-  }
-
-  if (!handle || !password) {
-    return false;
-  }
+  if (!enabled || !handle || !password) return false;
 
   let session = bskSession;
 
@@ -132,40 +90,20 @@ async function postToBluesky(env, item) {
   }
 
   console.log(`Published to Bluesky: ${item.title} (${item.url})`);
-
   return true;
 }
 
-/**
- * Publishes an item to every enabled social platform, returning whether at
- * least one platform accepted the post.
- *
- * @param {Record<string, unknown>} env
- * @param {{ title: string, url: string }} item
- * @returns {Promise<boolean>}
- */
-async function publishToSocials(env, item) {
-  const results = await Promise.allSettled([
-    postToTelegram(env, item),
-    postToBluesky(env, item),
-  ]);
-
+async function publishToSocials(env: any, item: any): Promise<boolean> {
+  const results = await Promise.allSettled([postToTelegram(env, item), postToBluesky(env, item)]);
   return results.some((result) => result.status === 'fulfilled' && result.value === true);
 }
 
-/**
- * Publishes any scheduled items whose time has come.
- *
- * @param {Record<string, unknown>} env
- * @returns {Promise<{ published: number }>}
- */
-export async function publishScheduled(env) {
+export async function publishScheduled(env: any): Promise<{ published: number }> {
   const due = await getDueItems(env.DB);
   let publishedCount = 0;
 
   for (const item of due) {
     const published = await publishToSocials(env, item);
-
     if (published) {
       await markPublished(env.DB, item.url);
       publishedCount += 1;
@@ -173,6 +111,5 @@ export async function publishScheduled(env) {
   }
 
   console.log(`Published ${publishedCount} item(s) to social`);
-
   return { published: publishedCount };
 }

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { FEEDS } from '../src/feeds.js';
-import { ingestFeeds } from '../src/ingest.js';
-import { createFakeDb } from './fake-db.js';
+import { FEEDS } from '../src/feeds.ts';
+import { ingestFeeds } from '../src/ingest.ts';
+import { createFakeDb } from './fake-db.ts';
 
 function rssFor(feedId) {
   return `<?xml version="1.0" encoding="UTF-8"?>

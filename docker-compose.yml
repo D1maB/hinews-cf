@@ -31,7 +31,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    command: node --test
+    command: npx tsx --test
     profiles:
       - test
     volumes:
@@ -59,7 +59,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    command: node scripts/download-feeds.mjs
+    command: npx tsx scripts/download-feeds.ts
     profiles:
       - download
     volumes:

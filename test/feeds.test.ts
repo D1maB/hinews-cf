@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { FEEDS, loadFeeds, parseRssItems } from '../src/feeds.js';
+import { FEEDS, loadFeeds, parseRssItems } from '../src/feeds.ts';
 
 const RSS = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">

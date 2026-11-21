@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { publishScheduled } from '../src/publish.js';
-import { createFakeDb } from './fake-db.js';
+import { publishScheduled } from '../src/publish.ts';
+import { createFakeDb } from './fake-db.ts';
 
 const originalFetch = globalThis.fetch;
 

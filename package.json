@@ -11,6 +11,7 @@
     "deploy": "docker-compose run --rm deploy"
   },
   "devDependencies": {
+    "tsx": "^4.19.0",
     "wrangler": "^3.114.17"
   },
   "dependencies": {

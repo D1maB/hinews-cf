@@ -1,4 +1,4 @@
-const HTML_ESCAPES = {
+const HTML_ESCAPES: Record<string, string> = {
   '&': '&amp;',
   '<': '&lt;',
   '>': '&gt;',
@@ -6,70 +6,37 @@ const HTML_ESCAPES = {
   "'": '&#39;',
 };
 
-/**
- * @param {string} value
- * @returns {string}
- */
-export function escapeHtml(value) {
+export function escapeHtml(value: unknown): string {
   return String(value).replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
 }
 
-/**
- * Returns the URL only when it uses a safe protocol.
- *
- * @param {string} value
- * @returns {string}
- */
-export function safeUrl(value) {
+export function safeUrl(value: unknown): string {
   try {
-    const url = new URL(value);
+    const url = new URL(String(value));
     return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : '#';
   } catch {
     return '#';
   }
 }
 
-/**
- * @param {string | null} value
- * @returns {string}
- */
-export function formatDate(value) {
-  if (!value) {
-    return '';
-  }
-
-  const date = new Date(value);
+export function formatDate(value: unknown): string {
+  if (!value) return '';
+  const date = new Date(value as any);
   return Number.isNaN(date.getTime())
     ? ''
     : date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-/**
- * Formats an ISO timestamp as `D Month YYYY HH:mm`.
- *
- * @param {string | null} value
- * @returns {string}
- */
-export function formatSyncDate(value) {
-  if (!value) {
-    return '';
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
+export function formatSyncDate(value: unknown): string {
+  if (!value) return '';
+  const date = new Date(value as any);
+  if (Number.isNaN(date.getTime())) return '';
   const monthName = date.toLocaleDateString('en-US', { month: 'long' });
-  const pad = (num) => String(num).padStart(2, '0');
+  const pad = (num: number) => String(num).padStart(2, '0');
   return `${date.getDate()} ${monthName} ${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-/**
- * @param {{ title: string, url: string, published_at: string | null, score?: number | null, scheduled_at?: string | null, status?: string }} item
- * @returns {string}
- */
-export function renderItem(item) {
+export function renderItem(item: any): string {
   const published = formatDate(item.published_at);
   const scoreValue = item.score != null ? Number(item.score) : null;
   const scoreClass = scoreValue == null ? '' : scoreValue >= 80 ? ' high' : scoreValue >= 60 ? ' mid' : '';
@@ -91,14 +58,7 @@ export function renderItem(item) {
 </li>`;
 }
 
-/**
- * @param {Array<{ name: string, url: string }>} feeds
- * @param {number} total
- * @param {string | null} [lastSync]
- * @param {Array<Record<string, unknown>>} [items]
- * @returns {string}
- */
-export function renderPage(feeds, total, lastSync = null, items = []) {
+export function renderPage(feeds: any[], total: number, lastSync: any = null, items: any[] = []): string {
   const list = items.length > 0 ? `<ul class="items">${items.map((item) => renderItem(item)).join('')}</ul>` : '<p class="empty">No stored items yet.</p>';
   return `<!doctype html>
 <html lang="en">

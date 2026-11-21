@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 
-import { FEEDS, FEED_REQUEST_INIT } from '../src/feeds.js';
+import { FEEDS, FEED_REQUEST_INIT } from '../src/feeds.ts';
 
 const OUTPUT_DIR = new URL('../feeds/', import.meta.url);
 

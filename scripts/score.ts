@@ -1,4 +1,4 @@
-import { getScoreOptions, scoreTitle } from '../src/score.js';
+import { getScoreOptions, scoreTitle } from '../src/score.ts';
 
 const title = process.argv[2];
 

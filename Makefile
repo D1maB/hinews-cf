@@ -38,7 +38,7 @@ wipe:
 	docker-compose run --rm --entrypoint npx app npx wrangler d1 execute DB --local --config wrangler.dev.toml --command "DELETE FROM items"
 
 score:
-	docker-compose run --rm app node scripts/score.mjs "$(SCORE_TEXT)"
+	docker-compose run --rm app npx tsx scripts/score.ts "$(SCORE_TEXT)"
 
 help:
 	@echo "hinews-cf - local development commands"

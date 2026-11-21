@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { getScoreOptions, scoreTitle } from '../src/score.js';
+import { getScoreOptions, scoreTitle } from '../src/score.ts';
 
 test('getScoreOptions reads the AI scoring configuration from the environment', () => {
   assert.deepEqual(getScoreOptions({}), { baseUrl: 'https://api.openai.com', model: 'gpt-4o-mini' });
