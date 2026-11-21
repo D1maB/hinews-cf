@@ -137,7 +137,8 @@ export async function parseRssItems(xml: string): Promise<
   }>
 > {
   const document = parser.parse(xml) as Record<string, unknown>;
-  const channel = (document as any).rss?.channel ?? (document as any).feed;
+  const channel =
+    (document as unknown).rss?.channel ?? (document as unknown).feed;
 
   if (!channel) {
     return [];
@@ -145,7 +146,7 @@ export async function parseRssItems(xml: string): Promise<
 
   const entries = toArray(channel.item ?? channel.entry);
   const items = await Promise.all(
-    entries.map(async (item: any) => {
+    entries.map(async (item: unknown) => {
       const title = readText(item.title);
       const description = readText(
         item.description ?? item.summary ?? item.content ?? item.subtitle,
@@ -162,9 +163,9 @@ export async function parseRssItems(xml: string): Promise<
     }),
   );
 
-  return dedupByTitle(items as any)
-    .filter(({ title, link }: any) => title && link)
-    .slice(0, ITEMS_PER_FEED) as any;
+  return dedupByTitle(items as unknown)
+    .filter(({ title, link }: unknown) => title && link)
+    .slice(0, ITEMS_PER_FEED) as unknown;
 }
 
 async function readLocalFeed(
@@ -194,12 +195,12 @@ export async function loadFeed(
   id: string;
   name: string;
   url: string;
-  items: any[];
+  items: unknown[];
   error?: string;
 }> {
   try {
     const xml = env.ASSETS
-      ? await readLocalFeed(env.ASSETS as any, feed)
+      ? await readLocalFeed(env.ASSETS as unknown, feed)
       : await fetchRemoteFeed(feed);
     return { ...feed, items: await parseRssItems(xml) };
   } catch (error) {
@@ -207,10 +208,14 @@ export async function loadFeed(
   }
 }
 
-export async function loadFeeds(
-  env: Record<string, unknown>,
-): Promise<
-  Array<{ id: string; name: string; url: string; items: any[]; error?: string }>
+export async function loadFeeds(env: Record<string, unknown>): Promise<
+  Array<{
+    id: string;
+    name: string;
+    url: string;
+    items: unknown[];
+    error?: string;
+  }>
 > {
   const feeds = getFeeds(env);
   const results = await Promise.allSettled(

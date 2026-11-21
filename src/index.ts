@@ -10,7 +10,7 @@ import { getScoreOptions } from './score.js';
 import { renderPage } from './render.js';
 import { publishScheduled } from './publish.js';
 
-function sortByScheduled(items: any[]): any[] {
+function sortByScheduled(items: unknown[]): unknown[] {
   return [...items].sort((a, b) =>
     (a.scheduled_at || '').localeCompare(b.scheduled_at || ''),
   );
@@ -22,8 +22,8 @@ async function handleRequest(
 ): Promise<Response> {
   try {
     const feeds = getFeeds(env);
-    const items = await listItems(env.DB as any);
-    const lastSync = await getLastSync(env.DB as any);
+    const items = await listItems(env.DB as D1Database);
+    const lastSync = await getLastSync(env.DB as D1Database);
     const allItems = sortByScheduled(items);
     return new Response(renderPage(feeds, items.length, lastSync, allItems), {
       headers: { 'content-type': 'text/html;charset=UTF-8' },
@@ -37,7 +37,7 @@ async function handleRequest(
 async function runScheduledIngestion(env: Record<string, unknown>) {
   try {
     const result = await ingestFeeds(env);
-    await backfillScores(env.DB as any, getScoreOptions(env));
+    await backfillScores(env.DB as D1Database, getScoreOptions(env));
     return result;
   } catch (error) {
     console.error('Scheduled ingestion failed', error);
@@ -56,7 +56,7 @@ function handleScheduled(
       ctx.waitUntil(publishScheduled(env));
       break;
     case '0 0 */7 * *':
-      ctx.waitUntil(deletePublished(env.DB as any));
+      ctx.waitUntil(deletePublished(env.DB as D1Database));
       break;
     default:
       ctx.waitUntil(runScheduledIngestion(env));

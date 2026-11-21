@@ -33,13 +33,16 @@ const SELECT_URLS = `
   FROM items
 `;
 
-export async function saveItems(db: any, items: any[]): Promise<number> {
+export async function saveItems(
+  db: D1Database,
+  items: unknown[],
+): Promise<number> {
   if (items.length === 0) return 0;
 
   const { results = [] } = await db.prepare(SELECT_URLS).all();
-  const existingUrls = new Set((results as any[]).map((row) => row.url));
+  const existingUrls = new Set((results as unknown[]).map((row) => row.url));
   const existingTitles = new Set(
-    (results as any[]).map((row) => normalizeTitle(row.title)),
+    (results as unknown[]).map((row) => normalizeTitle(row.title)),
   );
 
   const seenUrls = new Set<string>();
@@ -83,7 +86,7 @@ export async function saveItems(db: any, items: any[]): Promise<number> {
   );
 }
 
-export async function listItems(db: any): Promise<any[]> {
+export async function listItems(db: D1Database): Promise<any[]> {
   const { results = [] } = await db.prepare(LIST_ITEMS).all();
   return results as any[];
 }
@@ -91,20 +94,25 @@ export async function listItems(db: any): Promise<any[]> {
 const GET_META = `SELECT value FROM meta WHERE key = ?`;
 const SET_META = `INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`;
 
-export async function getLastSync(db: any): Promise<string | null> {
+export async function getLastSync(db: D1Database): Promise<string | null> {
   const row = await db.prepare(GET_META).bind('last_sync_at').first();
   return (row as any)?.value ?? null;
 }
 
-export async function setLastSync(db: any, value: string): Promise<void> {
+export async function setLastSync(
+  db: D1Database,
+  value: string,
+): Promise<void> {
   await db.prepare(SET_META).bind('last_sync_at', value).run();
 }
 
 const SELECT_SCHEDULED_AT = `SELECT scheduled_at FROM items`;
 
-export async function getLastScheduledAt(db: any): Promise<string | null> {
+export async function getLastScheduledAt(
+  db: D1Database,
+): Promise<string | null> {
   const { results = [] } = await db.prepare(SELECT_SCHEDULED_AT).all();
-  const values = (results as any[])
+  const values = (results as unknown[])
     .map((row) => row.scheduled_at)
     .filter(Boolean);
   if (values.length === 0) return null;
@@ -113,7 +121,7 @@ export async function getLastScheduledAt(db: any): Promise<string | null> {
   );
 }
 
-export async function getDueItems(db: any): Promise<any[]> {
+export async function getDueItems(db: D1Database): Promise<any[]> {
   const items = await listItems(db);
   const now = new Date().toISOString();
   return items.filter(
@@ -124,18 +132,24 @@ export async function getDueItems(db: any): Promise<any[]> {
   );
 }
 
-export async function getItemByUrl(db: any, url: string): Promise<any> {
+export async function getItemByUrl(db: D1Database, url: string): Promise<any> {
   return db.prepare(SELECT_ITEM_BY_URL).bind(url).first();
 }
 
-export async function getItemById(db: any, id: number | string): Promise<any> {
+export async function getItemById(
+  db: D1Database,
+  id: number | string,
+): Promise<any> {
   return db.prepare(SELECT_ITEM_BY_ID).bind(id).first();
 }
 
 export const MARK_ITEM_PUBLISHED =
   "UPDATE items SET status = 'published' WHERE url = ? AND status = 'scheduled'";
 
-export async function markPublished(db: any, url: string): Promise<number> {
+export async function markPublished(
+  db: D1Database,
+  url: string,
+): Promise<number> {
   const result = await db.prepare(MARK_ITEM_PUBLISHED).bind(url).run();
   return result.meta?.changes ?? 0;
 }
@@ -157,17 +171,17 @@ const CLEAR_ITEMS = 'DELETE FROM items';
 const DELETE_PUBLISHED = "DELETE FROM items WHERE status = 'published'";
 const UPDATE_SCORE = `UPDATE items SET score = ? WHERE url = ?`;
 
-export async function clearItems(db: any): Promise<void> {
+export async function clearItems(db: D1Database): Promise<void> {
   await db.prepare(CLEAR_ITEMS).run();
 }
 
-export async function deletePublished(db: any): Promise<number> {
+export async function deletePublished(db: D1Database): Promise<number> {
   const result = await db.prepare(DELETE_PUBLISHED).run();
   return result.meta?.changes ?? 0;
 }
 
 export async function backfillScores(
-  db: any,
+  db: D1Database,
   options: any = {},
 ): Promise<void> {
   const { results = [] } = await db.prepare(SELECT_UNSCORED).all();

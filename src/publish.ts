@@ -8,12 +8,18 @@ const BSKY_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
 let bskSession: any = null;
 
-function isPublisherEnabled(env: any, key: string): boolean {
+function isPublisherEnabled(
+  env: Record<string, unknown>,
+  key: string,
+): boolean {
   const value = env[key];
   return value === true || value === 'true';
 }
 
-async function postToTelegram(env: any, item: any): Promise<boolean> {
+async function postToTelegram(
+  env: Record<string, unknown>,
+  item: unknown,
+): Promise<boolean> {
   const enabled = isPublisherEnabled(env, 'TELEGRAM_ENABLED');
   const token = env.TELEGRAM_BOT_TOKEN;
   const chatId = env.TELEGRAM_CHAT_ID;
@@ -44,14 +50,17 @@ async function postToTelegram(env: any, item: any): Promise<boolean> {
   return true;
 }
 
-function buildBlueskyText(item: any): string {
+function buildBlueskyText(item: unknown): string {
   const text = item.description
     ? `${item.title}\n\n${item.description}\n\n${item.url}`
     : `${item.title}\n\n${item.url}`;
   return truncateToSentence(text, BSKY_POST_TEXT_LIMIT);
 }
 
-async function postToBluesky(env: any, item: any): Promise<boolean> {
+async function postToBluesky(
+  env: Record<string, unknown>,
+  item: unknown,
+): Promise<boolean> {
   const enabled = isPublisherEnabled(env, 'BSKY_ENABLED');
   const handle = env.BSKY_HANDLE;
   const password = env.BSKY_APP_PASSWORD;
@@ -104,7 +113,10 @@ async function postToBluesky(env: any, item: any): Promise<boolean> {
   return true;
 }
 
-async function publishToSocials(env: any, item: any): Promise<boolean> {
+async function publishToSocials(
+  env: Record<string, unknown>,
+  item: unknown,
+): Promise<boolean> {
   const results = await Promise.allSettled([
     postToTelegram(env, item),
     postToBluesky(env, item),
@@ -115,7 +127,7 @@ async function publishToSocials(env: any, item: any): Promise<boolean> {
 }
 
 export async function publishScheduled(
-  env: any,
+  env: Record<string, unknown>,
 ): Promise<{ published: number }> {
   const due = await getDueItems(env.DB);
   let publishedCount = 0;

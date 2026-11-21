@@ -17,20 +17,36 @@ export function getScoreOptions(env: Record<string, unknown> = {}): {
   baseUrl: string;
   model: string;
 } {
-  return {
-    baseUrl: (env?.SCORE_BASE_URL as string) || DEFAULT_SCORE_BASE_URL,
-    model: (env?.SCORE_MODEL as string) || DEFAULT_SCORE_MODEL,
-  };
+  const baseUrl = (
+    (env?.SCORE_BASE_URL as string) || DEFAULT_SCORE_BASE_URL
+  ).trim();
+  const model = ((env?.SCORE_MODEL as string) || DEFAULT_SCORE_MODEL).trim();
+  if (!baseUrl) {
+    throw new Error('SCORE_BASE_URL must not be empty');
+  }
+  if (!model) {
+    throw new Error('SCORE_MODEL must not be empty');
+  }
+  return { baseUrl, model };
 }
 
 export async function scoreTitle(
   title: string,
   options: { baseUrl?: string; model?: string } = {},
+  retries = 2,
 ): Promise<number | null> {
   if (!options.baseUrl || !options.model) {
     return null;
   }
-  return scoreWithAi({ title, baseUrl: options.baseUrl, model: options.model });
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const score = await scoreWithAi({
+      title,
+      baseUrl: options.baseUrl,
+      model: options.model,
+    });
+    if (score !== null) return score;
+  }
+  return null;
 }
 
 async function scoreWithAi({
