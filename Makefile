@@ -1,7 +1,8 @@
-.PHONY: up down logs build feeds test scheduled deploy query migrate help
+.PHONY: up down logs build feeds test scheduled deploy query migrate help score
 
 DB ?= DB
 DB_QUERY ?= SELECT COUNT(*) FROM items
+SCORE_TEXT ?= RTX 5090 graphics card review
 
 up:
 	docker-compose up -d --build app
@@ -33,6 +34,9 @@ query:
 migrate:
 	docker-compose run --rm --entrypoint npx app npx wrangler d1 migrations apply $(DB) --local --config wrangler.dev.toml
 
+score:
+	docker-compose run --rm app node scripts/score.mjs "$(SCORE_TEXT)"
+
 help:
 	@echo "hinews-cf - local development commands"
 	@echo ""
@@ -46,4 +50,5 @@ help:
 	@echo "  make deploy     - deploy to Cloudflare"
 	@echo "  make query      - run a SQL query against local D1 (e.g. make query DB_QUERY=\"SELECT COUNT(*) FROM items\")"
 	@echo "  make migrate    - apply D1 migrations to the local database"
+	@echo "  make score      - score a headline via the AI model (e.g. make score SCORE_TEXT=\"RTX 5090 review\")"
 	@echo "  make help       - show this help"
