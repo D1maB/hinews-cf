@@ -34,6 +34,11 @@ function rssFor(feedId) {
   );
 }
 
+test('returns empty array for malformed XML', async () => {
+  const result = await parseRssItems('<not-xml>');
+  assert.deepEqual(result, []);
+});
+
 test('parses RSS items, decoding entities and dropping unsafe rows', async (t) => {
   t.mock.method(
     globalThis,
