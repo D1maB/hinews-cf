@@ -3,6 +3,13 @@ import test from 'node:test';
 
 import { getScoreOptions, scoreTitle } from '../src/score.ts';
 
+test('getScoreOptions rejects empty configuration', () => {
+  assert.throws(
+    () => getScoreOptions({ SCORE_BASE_URL: '   ' }),
+    /SCORE_BASE_URL/,
+  );
+});
+
 test('getScoreOptions reads the AI scoring configuration from the environment', () => {
   assert.deepEqual(getScoreOptions({}), {
     baseUrl: 'https://api.openai.com',
