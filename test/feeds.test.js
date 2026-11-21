@@ -31,29 +31,29 @@ function rssFor(feedId) {
   return RSS.replaceAll('https://example.com/', `https://example.com/${feedId}/`);
 }
 
-test('parses RSS items, decoding entities and dropping unsafe rows', async () => {
-  const items = await parseRssItems(RSS, { enabled: false });
+test('parses RSS items, decoding entities and dropping unsafe rows', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ choices: [{ message: { content: '{"score": 82}' } }] }), { status: 200 }));
+
+  const items = await parseRssItems(RSS, { baseUrl: 'http://localhost:11434/v1', model: 'llama3.2:1b' });
 
   assert.deepEqual(items, [
     {
       title: 'RTX 5090 review & benchmarks',
       link: 'https://example.com/rtx-5090?a=1&b=2',
       publishedAt: 'Mon, 01 Jan 2024 12:00:00 GMT',
-      score: 70,
+      score: 82,
     },
     {
       title: "Ryzen 9950X is 'great'",
       link: 'https://example.com/ryzen-9950x',
       publishedAt: 'Tue, 02 Jan 2024 12:00:00 GMT',
-      score: 60,
+      score: 82,
     },
   ]);
 });
 
 test('loads every feed from local storage', async (t) => {
-  const remoteFetch = t.mock.method(globalThis, 'fetch', () => {
-    throw new Error('remote fetch should not run when local assets are available');
-  });
+  const aiFetch = t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ choices: [{ message: { content: '{"score": 82}' } }] }), { status: 200 }));
 
   const env = {
     ASSETS: {
@@ -62,12 +62,13 @@ test('loads every feed from local storage', async (t) => {
         return new Response(rssFor(url.pathname.slice(1, -4)));
       },
     },
-    SCORE_ENABLED: 'false',
+    SCORE_BASE_URL: 'http://localhost:11434/v1',
+    SCORE_MODEL: 'llama3.2:1b',
   };
 
   const feeds = await loadFeeds(env);
 
-  assert.equal(remoteFetch.mock.callCount(), 0);
+  assert.equal(aiFetch.mock.callCount(), FEEDS.length * 3);
   assert.equal(feeds.length, FEEDS.length);
   assert.ok(feeds.every((feed) => feed.items.length === 2));
 });
@@ -79,12 +80,17 @@ test('fetches remote feeds when no assets binding exists', async (t) => {
     return new Response(RSS);
   });
 
-  await loadFeeds({ SCORE_ENABLED: 'false' });
+  await loadFeeds({ SCORE_BASE_URL: 'http://localhost:11434/v1', SCORE_MODEL: 'llama3.2:1b' });
 
-  assert.deepEqual(requestedUrls.sort(), FEEDS.map((feed) => feed.url).sort());
+  assert.deepEqual(
+    requestedUrls.filter((url) => !String(url).includes('/chat/completions')).sort(),
+    FEEDS.map((feed) => feed.url).sort(),
+  );
 });
 
-test('keeps loading other feeds when a local feed is missing', async () => {
+test('keeps loading other feeds when a local feed is missing', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () => new Response(RSS));
+
   const env = {
     ASSETS: {
       fetch: async (url) =>
@@ -92,7 +98,8 @@ test('keeps loading other feeds when a local feed is missing', async () => {
           ? new Response('missing', { status: 404 })
           : new Response(RSS),
     },
-    SCORE_ENABLED: 'false',
+    SCORE_BASE_URL: 'http://localhost:11434/v1',
+    SCORE_MODEL: 'llama3.2:1b',
   };
 
   const feeds = await loadFeeds(env);

@@ -1,50 +1,4 @@
-const POSITIVE_KEYWORDS = [
-  'cpu',
-  'gpu',
-  'graphics card',
-  'processor',
-  'motherboard',
-  'ram',
-  'ddr5',
-  'ssd',
-  'nvme',
-  'benchmark',
-  'driver',
-  'overclock',
-  'cooler',
-  'psu',
-  'pc',
-  'gaming',
-  'ray tracing',
-  'dlss',
-  'fsr',
-  'thermal',
-  'fps',
-  'nvidia',
-  'amd',
-  'intel',
-  'geforce',
-  'radeon',
-  'ryzen',
-  'review',
-  'performance',
-  'latency',
-];
-
 export const MIN_SCORE = 50;
-
-const NEGATIVE_KEYWORDS = [
-  'smartphone',
-  'phone',
-  'iphone',
-  'android',
-  'console',
-  'playstation',
-  'xbox',
-  'nintendo',
-  'tablet',
-  'wearable',
-];
 
 const DEFAULT_SCORE_BASE_URL = 'https://api.openai.com/v1';
 const DEFAULT_SCORE_MODEL = 'gpt-4o-mini';
@@ -59,34 +13,31 @@ const SCORE_SYSTEM_PROMPT =
  * production falls back to a remote model through the default endpoint.
  *
  * @param {Record<string, unknown>} [env]
- * @returns {{ baseUrl: string, model: string, enabled: boolean }}
+ * @returns {{ baseUrl: string, model: string }}
  */
 export function getScoreOptions(env) {
   return {
     baseUrl: env?.SCORE_BASE_URL || DEFAULT_SCORE_BASE_URL,
     model: env?.SCORE_MODEL || DEFAULT_SCORE_MODEL,
-    enabled: env?.SCORE_ENABLED !== 'false',
   };
 }
 
 /**
  * Scores a headline for user relevance on a 0-100 scale using the configured
- * AI provider, falling back to curated keyword scoring when disabled or on failure.
+ * AI provider, returning null when no provider is configured or the call fails.
  *
  * @param {string} title
- * @param {{ baseUrl?: string, model?: string, enabled?: boolean }} [options]
- * @returns {Promise<number>}
+ * @param {{ baseUrl?: string, model?: string }} [options]
+ * @returns {Promise<number | null>}
  */
 export async function scoreTitle(title, options = {}) {
-  const fallbackScore = scoreByKeywords(title);
-
-  if (!options.enabled || !options.baseUrl || !options.model) {
-    return fallbackScore;
+  if (!options.baseUrl || !options.model) {
+    return null;
   }
 
-  const aiScore = await scoreWithAi({ title, baseUrl: options.baseUrl, model: options.model });
+  const score = await scoreWithAi({ title, baseUrl: options.baseUrl, model: options.model });
 
-  return aiScore ?? fallbackScore;
+  return score;
 }
 
 /**
@@ -142,27 +93,3 @@ function parseScore(content) {
   return Math.max(0, Math.min(100, score));
 }
 
-/**
- * Scores a headline with curated keyword bonuses and penalties.
- *
- * @param {string} title
- * @returns {number}
- */
-function scoreByKeywords(title) {
-  const normalized = String(title ?? '').toLowerCase();
-  let score = 50;
-
-  for (const keyword of POSITIVE_KEYWORDS) {
-    if (normalized.includes(keyword)) {
-      score += 10;
-    }
-  }
-
-  for (const keyword of NEGATIVE_KEYWORDS) {
-    if (normalized.includes(keyword)) {
-      score -= 20;
-    }
-  }
-
-  return Math.max(0, Math.min(100, score));
-}

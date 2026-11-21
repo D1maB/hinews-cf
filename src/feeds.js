@@ -147,8 +147,8 @@ async function fetchRemoteFeed(feed) {
  * each headline through the configured AI provider.
  *
  * @param {string} xml
- * @param {{ baseUrl?: string, model?: string, enabled?: boolean } } [options]
- * @returns {Promise<Array<{ title: string, link: string, publishedAt: string, score: number }>>}
+ * @param {{ baseUrl?: string, model?: string } } [options]
+ * @returns {Promise<Array<{ title: string, link: string, publishedAt: string, score: number | null }>>}
  */
 export async function parseRssItems(xml, options = {}) {
   const document = parser.parse(xml);

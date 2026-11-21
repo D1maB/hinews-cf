@@ -34,7 +34,7 @@ export async function ingestFeeds(env) {
   const SPONSORED_REGEX = /\b(pr|ad|collab|sponsored)\b/i;
 
   const deduped = dedupItems(items).filter((item) => {
-    if (item.score <= MIN_SCORE) return false;
+    if (item.score == null || item.score <= MIN_SCORE) return false;
     const textToCheck = `${item.title} ${item.description ?? ''}`;
     return !SPONSORED_REGEX.test(textToCheck);
   });
