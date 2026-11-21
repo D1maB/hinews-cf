@@ -5,4 +5,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: make qa
+      - run: make qa DOCKER_COMPOSE="docker compose"

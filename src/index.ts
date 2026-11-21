@@ -9,21 +9,19 @@ import { ingestFeeds } from './ingest.js';
 import { getScoreOptions } from './score.js';
 import { renderPage } from './render.js';
 import { publishScheduled } from './publish.js';
+import type { Env, StoredItem } from './types.js';
 
-function sortByScheduled(items: unknown[]): unknown[] {
+function sortByScheduled(items: StoredItem[]): StoredItem[] {
   return [...items].sort((a, b) =>
-    (a.scheduled_at || '').localeCompare(b.scheduled_at || ''),
+    (a.scheduled_at ?? '').localeCompare(b.scheduled_at ?? ''),
   );
 }
 
-async function handleRequest(
-  _request: Request,
-  env: Record<string, unknown>,
-): Promise<Response> {
+async function handleRequest(env: Env): Promise<Response> {
   try {
     const feeds = getFeeds(env);
-    const items = await listItems(env.DB as D1Database);
-    const lastSync = await getLastSync(env.DB as D1Database);
+    const items = await listItems(env.DB);
+    const lastSync = await getLastSync(env.DB);
     const allItems = sortByScheduled(items);
     return new Response(renderPage(feeds, items.length, lastSync, allItems), {
       headers: { 'content-type': 'text/html;charset=UTF-8' },
@@ -34,48 +32,44 @@ async function handleRequest(
   }
 }
 
-async function runScheduledIngestion(env: Record<string, unknown>) {
-  try {
-    const result = await ingestFeeds(env);
-    await backfillScores(env.DB as D1Database, getScoreOptions(env));
-    return result;
-  } catch (error) {
-    console.error('Scheduled ingestion failed', error);
-    throw error;
-  }
+async function runScheduledIngestion(env: Env) {
+  const result = await ingestFeeds(env);
+  await backfillScores(env.DB, getScoreOptions(env));
+  return result;
 }
 
 function handleScheduled(
-  controller: unknown,
-  env: Record<string, unknown>,
-  ctx: { waitUntil: (p: Promise<unknown>) => void },
+  controller: ScheduledController,
+  env: Env,
+  ctx: ExecutionContext,
 ) {
-  const cron = controller?.cron ?? '';
-  switch (cron) {
+  switch (controller.cron) {
     case '* * * * *':
       ctx.waitUntil(publishScheduled(env));
       break;
     case '0 0 */7 * *':
-      ctx.waitUntil(deletePublished(env.DB as D1Database));
+      ctx.waitUntil(deletePublished(env.DB));
       break;
     default:
-      ctx.waitUntil(runScheduledIngestion(env));
+      ctx.waitUntil(
+        runScheduledIngestion(env).catch((error: unknown) => {
+          console.error('Scheduled ingestion failed', error);
+          throw error;
+        }),
+      );
       break;
   }
 }
 
 export default {
-  async fetch(
-    request: Request,
-    env: Record<string, unknown>,
-  ): Promise<Response> {
-    return handleRequest(request, env);
+  async fetch(_request: Request, env: Env): Promise<Response> {
+    return handleRequest(env);
   },
   async scheduled(
-    controller: unknown,
-    env: Record<string, unknown>,
-    ctx: { waitUntil: (p: Promise<unknown>) => void },
-  ) {
+    controller: ScheduledController,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<void> {
     handleScheduled(controller, env, ctx);
   },
-};
+} satisfies ExportedHandler<Env>;

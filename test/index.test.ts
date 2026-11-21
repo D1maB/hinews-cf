@@ -1,17 +1,14 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { type TestContext } from 'node:test';
 
 import worker from '../src/index.ts';
-import { FEEDS } from '../src/feeds.ts';
+import { DEFAULT_FEEDS } from '../src/feeds.ts';
 import { createFakeDb } from './fake-db.ts';
+import type { Env } from '../src/types.ts';
 
 const REQUEST = new Request('https://example.com/');
 
-/**
- * @param {string} feedId
- * @returns {string}
- */
-function rssFor(feedId) {
+function rssFor(feedId: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
@@ -24,16 +21,14 @@ function rssFor(feedId) {
 </rss>`;
 }
 
-/**
- * @returns {{ ASSETS: { fetch: (url: URL) => Promise<Response> }, fetches: () => number }}
- */
-function localAssets() {
+function localAssets(): Pick<Env, 'ASSETS'> & { fetches: () => number } {
   let fetches = 0;
 
   return {
     ASSETS: {
-      fetch: async (url) => {
+      fetch: async (input: RequestInfo | URL) => {
         fetches += 1;
+        const url = new URL(String(input));
         return new Response(rssFor(url.pathname.slice(1, -4)));
       },
     },
@@ -41,7 +36,7 @@ function localAssets() {
   };
 }
 
-test('renders every stored item from the database', async (t) => {
+function mockScoring(t: TestContext): void {
   t.mock.method(
     globalThis,
     'fetch',
@@ -53,6 +48,21 @@ test('renders every stored item from the database', async (t) => {
         { status: 200 },
       ),
   );
+}
+
+function runScheduled(env: Env, cron: string): Promise<unknown> {
+  let pending: Promise<unknown> | undefined;
+  worker.scheduled({ cron } as ScheduledController, env, {
+    waitUntil: (promise) => {
+      pending = Promise.resolve(promise);
+    },
+    passThroughOnException: () => {},
+  } as ExecutionContext);
+  assert.ok(pending, 'scheduled handler did not call waitUntil');
+  return pending;
+}
+
+test('renders every stored item from the database', async () => {
   const rows = Array.from({ length: 7 }, (_, index) => ({
     feed_id: 'kitguru',
     feed_name: 'KitGuru',
@@ -63,13 +73,11 @@ test('renders every stored item from the database', async (t) => {
 
   const response = await worker.fetch(REQUEST, {
     DB: createFakeDb(rows),
-    SCORE_BASE_URL: 'http://localhost:11434/v1',
-    SCORE_MODEL: 'llama3.2:1b',
   });
   const html = await response.text();
 
   assert.equal(response.status, 200);
-  assert.match(response.headers.get('content-type'), /^text\/html/);
+  assert.match(response.headers.get('content-type') ?? '', /^text\/html/);
   assert.match(html, /7 stored headlines from 8 RSS feeds/);
 
   for (const row of rows) {
@@ -77,7 +85,7 @@ test('renders every stored item from the database', async (t) => {
   }
 });
 
-test('renders all stored items in a single list with source notes sorted by scheduled time', async (t) => {
+test('renders all stored items in a single list with source notes sorted by scheduled time', async () => {
   const db = createFakeDb([
     {
       feed_id: 'wccftech',
@@ -99,24 +107,7 @@ test('renders all stored items in a single list with source notes sorted by sche
     },
   ]);
 
-  const env = {
-    DB: db,
-    SCORE_BASE_URL: 'http://localhost:11434/v1',
-    SCORE_MODEL: 'llama3.2:1b',
-  };
-  t.mock.method(
-    globalThis,
-    'fetch',
-    async () =>
-      new Response(
-        JSON.stringify({
-          choices: [{ message: { content: '{"score": 82}' } }],
-        }),
-        { status: 200 },
-      ),
-  );
-
-  const html = await (await worker.fetch(REQUEST, env)).text();
+  const html = await (await worker.fetch(REQUEST, { DB: db })).text();
 
   assert.doesNotMatch(html, /<section class="feed">/);
 
@@ -124,36 +115,22 @@ test('renders all stored items in a single list with source notes sorted by sche
     (match) => match[0],
   );
   assert.equal(items.length, 2);
-  assert.match(items[0], /Source: Wccftech/);
-  assert.match(items[0], /Status: scheduled/);
-  assert.match(items[0], /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.match(items[0] ?? '', /Source: Wccftech/);
+  assert.match(items[0] ?? '', /Status: scheduled/);
+  assert.match(items[0] ?? '', /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
   assert.ok(!html.includes('<script>alert(1)</script>'));
-  assert.match(items[1], /KitGuru story/);
-  assert.match(items[1], /Source: KitGuru/);
-  assert.match(items[1], /Status: scheduled/);
+  assert.match(items[1] ?? '', /KitGuru story/);
+  assert.match(items[1] ?? '', /Source: KitGuru/);
+  assert.match(items[1] ?? '', /Status: scheduled/);
 });
 
-test('renders an empty page when the database has no items yet', async (t) => {
-  t.mock.method(console, 'log', () => {});
+test('renders an empty page when the database has no items yet', async () => {
   const db = createFakeDb();
   const assets = localAssets();
   const env = {
     ...assets,
     DB: db,
-    SCORE_BASE_URL: 'http://localhost:11434/v1',
-    SCORE_MODEL: 'llama3.2:1b',
   };
-  t.mock.method(
-    globalThis,
-    'fetch',
-    async () =>
-      new Response(
-        JSON.stringify({
-          choices: [{ message: { content: '{"score": 82}' } }],
-        }),
-        { status: 200 },
-      ),
-  );
 
   const first = await (await worker.fetch(REQUEST, env)).text();
   const fetchesAfterFirstRequest = assets.fetches();
@@ -174,31 +151,12 @@ test('scheduled runs store fresh items', async (t) => {
   const env = {
     ...localAssets(),
     DB: db,
-    SCORE_BASE_URL: 'http://localhost:11434/v1',
-    SCORE_MODEL: 'llama3.2:1b',
   };
-  t.mock.method(
-    globalThis,
-    'fetch',
-    async () =>
-      new Response(
-        JSON.stringify({
-          choices: [{ message: { content: '{"score": 82}' } }],
-        }),
-        { status: 200 },
-      ),
-  );
-  let pending;
+  mockScoring(t);
 
-  worker.scheduled({ cron: '0 */12 * * *' }, env, {
-    waitUntil: (promise) => {
-      pending = promise;
-    },
-  });
+  await runScheduled(env, '0 */12 * * *');
 
-  await pending;
-
-  assert.equal(db.rows.size, FEEDS.length);
+  assert.equal(db.rows.size, DEFAULT_FEEDS.length);
 });
 
 test('scheduled runs append fresh items without clearing existing ones', async (t) => {
@@ -212,37 +170,18 @@ test('scheduled runs append fresh items without clearing existing ones', async (
       published_at: '2024-01-01T00:00:00.000Z',
       status: 'published',
       scheduled_at: '2026-11-01T10:00:00.000Z',
-      score: 60,
+      score: 80,
     },
   ]);
   const env = {
     ...localAssets(),
     DB: db,
-    SCORE_BASE_URL: 'http://localhost:11434/v1',
-    SCORE_MODEL: 'llama3.2:1b',
   };
-  t.mock.method(
-    globalThis,
-    'fetch',
-    async () =>
-      new Response(
-        JSON.stringify({
-          choices: [{ message: { content: '{"score": 82}' } }],
-        }),
-        { status: 200 },
-      ),
-  );
-  let pending;
+  mockScoring(t);
 
-  worker.scheduled({ cron: '0 */12 * * *' }, env, {
-    waitUntil: (promise) => {
-      pending = promise;
-    },
-  });
+  await runScheduled(env, '0 */12 * * *');
 
-  await pending;
-
-  assert.equal(db.rows.size, FEEDS.length + 1);
+  assert.equal(db.rows.size, DEFAULT_FEEDS.length + 1);
 });
 
 test('scheduled cleanup removes published items every 7 days', async (t) => {
@@ -270,15 +209,8 @@ test('scheduled cleanup removes published items every 7 days', async (t) => {
     },
   ]);
   const env = { ...localAssets(), DB: db };
-  let pending;
 
-  worker.scheduled({ cron: '0 0 */7 * *' }, env, {
-    waitUntil: (promise) => {
-      pending = promise;
-    },
-  });
-
-  await pending;
+  await runScheduled(env, '0 0 */7 * *');
 
   assert.equal(db.rows.size, 1);
   assert.ok(!db.rows.has('https://example.com/published'));

@@ -2,6 +2,11 @@ name = "hinews-cf"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
+# Production secrets (SCORE_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
+# BSKY_HANDLE, BSKY_APP_PASSWORD) are set with `wrangler secret put`.
+# SCORE_BASE_URL and SCORE_MODEL can be added under [vars] if they differ from
+# the defaults in src/score.ts.
+
 # Refresh stored headlines twice a day.
 # Publish every minute, ingest every 12 hours, cleanup published items every 7 days.
 [triggers]

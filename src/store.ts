@@ -1,5 +1,7 @@
 import { normalizeTitle } from './dedup.js';
 import { scoreTitle, MIN_SCORE } from './score.js';
+import type { ScoreConfig } from './score.js';
+import type { Database, NewItem, PublishTarget, StoredItem } from './types.js';
 
 const SCHEDULE_WINDOW_MINUTES = 12 * 60;
 
@@ -9,23 +11,9 @@ const INSERT_ITEM = `
 `;
 
 const LIST_ITEMS = `
-  SELECT feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description
+  SELECT feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description, telegram_published, bsky_published
   FROM items
   ORDER BY id
-`;
-
-export const SELECT_ITEM_BY_URL = `
-  SELECT feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description
-  FROM items
-  WHERE url = ?
-  LIMIT 1
-`;
-
-export const SELECT_ITEM_BY_ID = `
-  SELECT feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description
-  FROM items
-  WHERE id = ?
-  LIMIT 1
 `;
 
 const SELECT_URLS = `
@@ -33,22 +21,47 @@ const SELECT_URLS = `
   FROM items
 `;
 
+const GET_META = `SELECT value FROM meta WHERE key = ?`;
+const SET_META = `INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`;
+
+const SELECT_SCHEDULED_AT = `SELECT scheduled_at FROM items`;
+const SELECT_UNSCORED = `SELECT url, title FROM items WHERE score IS NULL`;
+const SELECT_SCHEDULE = `SELECT url, scheduled_at FROM items`;
+const DELETE_LOW_SCORES = `DELETE FROM items WHERE score IS NOT NULL AND score <= ?`;
+const NORMALIZE_STATUS = `UPDATE items SET status = 'scheduled' WHERE status IS NULL OR status = 'new'`;
+const UPDATE_SCORE = `UPDATE items SET score = ? WHERE url = ?`;
+const UPDATE_SCHEDULED_AT = `UPDATE items SET scheduled_at = ? WHERE url = ?`;
+const DELETE_PUBLISHED = "DELETE FROM items WHERE status = 'published'";
+const MARK_ITEM_PUBLISHED =
+  "UPDATE items SET status = 'published' WHERE url = ? AND status = 'scheduled'";
+
+const MARK_TARGET_PUBLISHED: Record<PublishTarget, string> = {
+  telegram: `UPDATE items SET telegram_published = 1 WHERE url = ?`,
+  bluesky: `UPDATE items SET bsky_published = 1 WHERE url = ?`,
+};
+
+/**
+ * Store new items, skipping URLs and titles that already exist.
+ * Returns the number of rows actually inserted.
+ */
 export async function saveItems(
-  db: D1Database,
-  items: unknown[],
+  db: Database,
+  items: NewItem[],
 ): Promise<number> {
   if (items.length === 0) return 0;
 
-  const { results = [] } = await db.prepare(SELECT_URLS).all();
-  const existingUrls = new Set((results as unknown[]).map((row) => row.url));
+  const { results } = await db
+    .prepare(SELECT_URLS)
+    .all<{ url: string; title: string }>();
+  const existingUrls = new Set(results.map((row) => row.url));
   const existingTitles = new Set(
-    (results as unknown[]).map((row) => normalizeTitle(row.title)),
+    results.map((row) => normalizeTitle(row.title)),
   );
 
   const seenUrls = new Set<string>();
   const seenTitles = new Set<string>();
-  const newItems = items.filter((item: unknown) => {
-    const titleKey = item.title.trim().toLowerCase();
+  const newItems = items.filter((item) => {
+    const titleKey = normalizeTitle(item.title);
     if (
       existingUrls.has(item.url) ||
       existingTitles.has(titleKey) ||
@@ -64,7 +77,7 @@ export async function saveItems(
 
   if (newItems.length === 0) return 0;
 
-  const statements = newItems.map((item: unknown) =>
+  const statements = newItems.map((item) =>
     db
       .prepare(INSERT_ITEM)
       .bind(
@@ -80,83 +93,73 @@ export async function saveItems(
   );
 
   const results2 = await db.batch(statements);
-  return (results2 as unknown[]).reduce(
-    (total: number, result: unknown) => total + (result.meta?.changes ?? 0),
+  return results2.reduce(
+    (total, result) => total + (result.meta.changes ?? 0),
     0,
   );
 }
 
-export async function listItems(db: D1Database): Promise<unknown[]> {
-  const { results = [] } = await db.prepare(LIST_ITEMS).all();
-  return results as unknown[];
+export async function listItems(db: Database): Promise<StoredItem[]> {
+  const { results } = await db.prepare(LIST_ITEMS).all<StoredItem>();
+  return results;
 }
 
-const GET_META = `SELECT value FROM meta WHERE key = ?`;
-const SET_META = `INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`;
-
-export async function getLastSync(db: D1Database): Promise<string | null> {
-  const row = await db.prepare(GET_META).bind('last_sync_at').first();
-  return (row as unknown)?.value ?? null;
+export async function getLastSync(db: Database): Promise<string | null> {
+  const row = await db.prepare(GET_META).bind('last_sync_at').first<{
+    value: string;
+  }>();
+  return row?.value ?? null;
 }
 
-export async function setLastSync(
-  db: D1Database,
-  value: string,
-): Promise<void> {
+export async function setLastSync(db: Database, value: string): Promise<void> {
   await db.prepare(SET_META).bind('last_sync_at', value).run();
 }
 
-const SELECT_SCHEDULED_AT = `SELECT scheduled_at FROM items`;
-
-export async function getLastScheduledAt(
-  db: D1Database,
-): Promise<string | null> {
-  const { results = [] } = await db.prepare(SELECT_SCHEDULED_AT).all();
-  const values = (results as unknown[])
+export async function getLastScheduledAt(db: Database): Promise<string | null> {
+  const { results } = await db
+    .prepare(SELECT_SCHEDULED_AT)
+    .all<{ scheduled_at: string | null }>();
+  const values = results
     .map((row) => row.scheduled_at)
-    .filter(Boolean);
+    .filter((value): value is string => Boolean(value));
   if (values.length === 0) return null;
-  return values.reduce((latest: string, value: string) =>
-    value > latest ? value : latest,
-  );
+  return values.reduce((latest, value) => (value > latest ? value : latest));
 }
 
-export async function getDueItems(db: D1Database): Promise<unknown[]> {
+/** Items whose scheduled publication time has arrived. */
+export async function getDueItems(db: Database): Promise<StoredItem[]> {
   const items = await listItems(db);
   const now = new Date().toISOString();
   return items.filter(
-    (item: unknown) =>
+    (item) =>
       item.status === 'scheduled' &&
-      item.scheduled_at &&
+      item.scheduled_at !== null &&
       item.scheduled_at <= now,
   );
 }
 
-export async function getItemByUrl(
-  db: D1Database,
-  url: string,
-): Promise<unknown> {
-  return db.prepare(SELECT_ITEM_BY_URL).bind(url).first();
-}
-
-export async function getItemById(
-  db: D1Database,
-  id: number | string,
-): Promise<unknown> {
-  return db.prepare(SELECT_ITEM_BY_ID).bind(id).first();
-}
-
-export const MARK_ITEM_PUBLISHED =
-  "UPDATE items SET status = 'published' WHERE url = ? AND status = 'scheduled'";
-
 export async function markPublished(
-  db: D1Database,
+  db: Database,
   url: string,
 ): Promise<number> {
   const result = await db.prepare(MARK_ITEM_PUBLISHED).bind(url).run();
-  return result.meta?.changes ?? 0;
+  return result.meta.changes ?? 0;
 }
 
+/** Record that one publishing destination accepted an item. */
+export async function markTargetPublished(
+  db: Database,
+  url: string,
+  target: PublishTarget,
+): Promise<number> {
+  const result = await db
+    .prepare(MARK_TARGET_PUBLISHED[target])
+    .bind(url)
+    .run();
+  return result.meta.changes ?? 0;
+}
+
+/** Spread `itemCount` items across the next 12-hour window. */
 export function buildScheduledAt(
   baseTime: number,
   index: number,
@@ -169,54 +172,50 @@ export function buildScheduledAt(
   return scheduledTime.toISOString();
 }
 
-const SELECT_UNSCORED = `SELECT url, title FROM items WHERE score IS NULL`;
-const CLEAR_ITEMS = 'DELETE FROM items';
-const DELETE_PUBLISHED = "DELETE FROM items WHERE status = 'published'";
-const UPDATE_SCORE = `UPDATE items SET score = ? WHERE url = ?`;
-
-export async function clearItems(db: D1Database): Promise<void> {
-  await db.prepare(CLEAR_ITEMS).run();
-}
-
-export async function deletePublished(db: D1Database): Promise<number> {
+/** Delete items that have already been published to their destinations. */
+export async function deletePublished(db: Database): Promise<number> {
   const result = await db.prepare(DELETE_PUBLISHED).run();
-  return result.meta?.changes ?? 0;
+  return result.meta.changes ?? 0;
 }
 
+/**
+ * Score unscheduled/unscored items, drop low-scoring ones, and assign
+ * publication times using batched writes.
+ */
 export async function backfillScores(
-  db: D1Database,
-  options: unknown = {},
+  db: Database,
+  options: Partial<ScoreConfig> = {},
 ): Promise<void> {
-  const { results = [] } = await db.prepare(SELECT_UNSCORED).all();
+  const { results: unscored } = await db
+    .prepare(SELECT_UNSCORED)
+    .all<{ url: string; title: string }>();
 
-  for (const row of results as unknown[]) {
-    await db
-      .prepare(UPDATE_SCORE)
-      .bind(await scoreTitle(row.title, options), row.url)
-      .run();
+  const scoreStatements = [];
+  for (const row of unscored) {
+    const score = await scoreTitle(row.title, options);
+    scoreStatements.push(db.prepare(UPDATE_SCORE).bind(score, row.url));
+  }
+  if (scoreStatements.length > 0) {
+    await db.batch(scoreStatements);
   }
 
-  await db
-    .prepare('DELETE FROM items WHERE score IS NOT NULL AND score <= ?')
-    .bind(MIN_SCORE)
-    .run();
-  await db
-    .prepare(
-      "UPDATE items SET status = 'scheduled' WHERE status IS NULL OR status = 'new'",
-    )
-    .run();
+  await db.batch([
+    db.prepare(DELETE_LOW_SCORES).bind(MIN_SCORE),
+    db.prepare(NORMALIZE_STATUS),
+  ]);
 
-  const { results: allRows = [] } = await db
-    .prepare('SELECT url, scheduled_at FROM items')
-    .all();
-  const unscheduled = (allRows as unknown[]).filter((row) => !row.scheduled_at);
+  const { results: allRows } = await db
+    .prepare(SELECT_SCHEDULE)
+    .all<{ url: string; scheduled_at: string | null }>();
+  const unscheduled = allRows.filter((row) => !row.scheduled_at);
+  if (unscheduled.length === 0) return;
+
   const last = await getLastScheduledAt(db);
   const baseTime = last ? new Date(last).getTime() : Date.now();
-  for (let index = 0; index < unscheduled.length; index += 1) {
-    const scheduledAt = buildScheduledAt(baseTime, index, unscheduled.length);
-    await db
-      .prepare('UPDATE items SET scheduled_at = ? WHERE url = ?')
-      .bind(scheduledAt, unscheduled[index].url)
-      .run();
-  }
+  const scheduleStatements = unscheduled.map((row, index) =>
+    db
+      .prepare(UPDATE_SCHEDULED_AT)
+      .bind(buildScheduledAt(baseTime, index, unscheduled.length), row.url),
+  );
+  await db.batch(scheduleStatements);
 }

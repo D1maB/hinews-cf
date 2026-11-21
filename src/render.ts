@@ -1,3 +1,5 @@
+import type { FeedConfig, StoredItem } from './types.js';
+
 const HTML_ESCAPES: Record<string, string> = {
   '&': '&amp;',
   '<': '&lt;',
@@ -21,9 +23,9 @@ export function safeUrl(value: unknown): string {
   }
 }
 
-export function formatDate(value: unknown): string {
+export function formatDate(value: string | null | undefined): string {
   if (!value) return '';
-  const date = new Date(value as unknown);
+  const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? ''
     : date.toLocaleDateString('en-US', {
@@ -33,16 +35,16 @@ export function formatDate(value: unknown): string {
       });
 }
 
-export function formatSyncDate(value: unknown): string {
+export function formatSyncDate(value: string | null | undefined): string {
   if (!value) return '';
-  const date = new Date(value as unknown);
+  const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   const monthName = date.toLocaleDateString('en-US', { month: 'long' });
   const pad = (num: number) => String(num).padStart(2, '0');
   return `${date.getDate()} ${monthName} ${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export function renderItem(item: unknown): string {
+export function renderItem(item: StoredItem): string {
   const published = formatDate(item.published_at);
   const scoreValue = item.score != null ? Number(item.score) : null;
   const scoreClass =
@@ -83,10 +85,10 @@ export function renderItem(item: unknown): string {
 }
 
 export function renderPage(
-  feeds: unknown[],
+  feeds: FeedConfig[],
   total: number,
-  lastSync: unknown = null,
-  items: unknown[] = [],
+  lastSync: string | null = null,
+  items: StoredItem[] = [],
 ): string {
   const list =
     items.length > 0

@@ -1,56 +1,63 @@
-.PHONY: up down logs build feeds test scheduled deploy query migrate help score wipe
+.PHONY: up down logs build feeds test typecheck scheduled deploy query migrate help score wipe
+
+# The standalone v1 CLI is the supported local runtime. CI overrides this with
+# `DOCKER_COMPOSE="docker compose"` because GitHub runners ship only Compose v2.
+DOCKER_COMPOSE ?= docker-compose
 
 DB ?= DB
 DB_QUERY ?= SELECT COUNT(*) FROM items
 SCORE_TEXT ?= RTX 5090 graphics card review
 
 up:
-	docker-compose up -d --build app
+	$(DOCKER_COMPOSE) up -d --build app
 
 down:
-	docker-compose down
+	$(DOCKER_COMPOSE) down
 
 logs:
-	docker-compose logs -f app
+	$(DOCKER_COMPOSE) logs -f app
 
 build:
-	docker-compose build app
+	$(DOCKER_COMPOSE) build app
 
 feeds:
-	docker-compose run --rm download-feeds
+	$(DOCKER_COMPOSE) run --rm download-feeds
 
 test:
-	docker-compose run --rm tools npx tsx --test
+	$(DOCKER_COMPOSE) run --rm test
+
+typecheck:
+	$(DOCKER_COMPOSE) run --rm tools npx tsc --noEmit
 
 lint:
-	docker-compose run --rm tools npx eslint .
+	$(DOCKER_COMPOSE) run --rm tools npx eslint .
 
 format:
-	docker-compose run --rm tools npx prettier --write .
+	$(DOCKER_COMPOSE) run --rm tools npx prettier --write .
 
 format-check:
-	docker-compose run --rm tools npx prettier --check .
+	$(DOCKER_COMPOSE) run --rm tools npx prettier --check .
 
 qa:
-	docker-compose run --rm tools sh -c "npx prettier --check . && npx eslint . && npx tsx --test"
+	$(DOCKER_COMPOSE) run --rm tools sh -c "npx prettier --check . && npx eslint . && npx tsc --noEmit && npx tsx --test"
 
 scheduled:
 	curl "http://localhost:8787/__scheduled?cron=0+*/12+*+*+*"
 
 deploy:
-	docker-compose run --rm deploy
+	$(DOCKER_COMPOSE) run --rm deploy
 
 query:
-	docker-compose run --rm --entrypoint npx app npx wrangler d1 execute $(DB) --local --config wrangler.dev.toml --command "$(DB_QUERY)"
+	$(DOCKER_COMPOSE) run --rm app npx wrangler d1 execute $(DB) --local --config wrangler.dev.toml --command "$(DB_QUERY)"
 
 migrate:
-	docker-compose run --rm --entrypoint npx app npx wrangler d1 migrations apply $(DB) --local --config wrangler.dev.toml
+	$(DOCKER_COMPOSE) run --rm app npx wrangler d1 migrations apply $(DB) --local --config wrangler.dev.toml
 
 wipe:
-	docker-compose run --rm --entrypoint npx app npx wrangler d1 execute DB --local --config wrangler.dev.toml --command "DELETE FROM items"
+	$(DOCKER_COMPOSE) run --rm app npx wrangler d1 execute DB --local --config wrangler.dev.toml --command "DELETE FROM items"
 
 score:
-	docker-compose run --rm app npx tsx scripts/score.ts "$(SCORE_TEXT)"
+	$(DOCKER_COMPOSE) run --rm tools npx tsx scripts/score.ts "$(SCORE_TEXT)"
 
 help:
 	@echo "hinews-cf - local development commands"
@@ -61,6 +68,7 @@ help:
 	@echo "  make build      - rebuild the app image"
 	@echo "  make feeds      - download RSS feeds into local cache"
 	@echo "  make test       - run the test suite"
+	@echo "  make typecheck  - typecheck the project"
 	@echo "  make scheduled  - trigger the cron handler locally"
 	@echo "  make deploy     - deploy to Cloudflare"
 	@echo "  make query      - run a SQL query against local D1 (e.g. make query DB_QUERY=\"SELECT COUNT(*) FROM items\")"

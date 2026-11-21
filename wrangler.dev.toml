@@ -3,7 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
 # Local development scores headlines through a local Ollama model.
-# Production defaults to the remote model configured in src/score.js.
+# Production uses the same defaults from src/score.ts unless SCORE_* is configured.
 [vars]
 SCORE_BASE_URL = "http://host.docker.internal:11435"
 SCORE_MODEL = "llama3.2:1b"

@@ -6,10 +6,26 @@ import {
   buildScheduledAt,
 } from './store.js';
 import { dedupItems } from './dedup.js';
+import type { Env, LoadedFeed, NewItem } from './types.js';
 
-export async function ingestFeeds(
-  env: Record<string, unknown>,
-): Promise<{ inserted: number; feeds: unknown; items: unknown[] }> {
+const SPONSORED_REGEX = /\b(pr|ad|collab|sponsored)\b/i;
+
+export interface IngestResult {
+  inserted: number;
+  feeds: LoadedFeed[];
+  items: Array<{
+    feed_id: string;
+    feed_name: string;
+    title: string;
+    url: string;
+    published_at: string;
+    score: number | null;
+    description?: string;
+  }>;
+}
+
+/** Fetch all configured feeds, deduplicate, and store new headlines. */
+export async function ingestFeeds(env: Env): Promise<IngestResult> {
   const feeds = await loadFeeds(env);
 
   for (const feed of feeds) {
@@ -18,8 +34,8 @@ export async function ingestFeeds(
     }
   }
 
-  const items = feeds.flatMap((feed: unknown) =>
-    feed.items.map((item: unknown) => ({
+  const items: NewItem[] = feeds.flatMap((feed) =>
+    feed.items.map((item) => ({
       feedId: feed.id,
       feedName: feed.name,
       title: item.title,
@@ -30,32 +46,30 @@ export async function ingestFeeds(
     })),
   );
 
-  const SPONSORED_REGEX = /\b(pr|ad|collab|sponsored)\b/i;
-
-  const deduped = dedupItems(items).filter((item: unknown) => {
+  const deduped = dedupItems(items).filter((item) => {
     const textToCheck = `${item.title} ${item.description ?? ''}`;
     return !SPONSORED_REGEX.test(textToCheck);
   });
 
-  const lastScheduledAt = await getLastScheduledAt(env.DB as unknown);
+  const lastScheduledAt = await getLastScheduledAt(env.DB);
   const baseTime = lastScheduledAt
     ? new Date(lastScheduledAt).getTime()
     : Date.now();
-  const prepared = deduped.map((item: unknown, index: number) => ({
+  const prepared = deduped.map((item, index) => ({
     ...item,
     scheduledAt: buildScheduledAt(baseTime, index, deduped.length),
   }));
 
-  const inserted = await saveItems(env.DB as unknown, prepared);
+  const inserted = await saveItems(env.DB, prepared);
 
-  await setLastSync(env.DB as unknown, new Date().toISOString());
+  await setLastSync(env.DB, new Date().toISOString());
 
   console.log(`Stored ${inserted} new item(s) from ${feeds.length} feeds`);
 
   return {
     inserted,
     feeds,
-    items: prepared.map((item: unknown) => ({
+    items: prepared.map((item) => ({
       feed_id: item.feedId,
       feed_name: item.feedName,
       title: item.title,

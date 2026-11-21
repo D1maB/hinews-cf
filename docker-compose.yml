@@ -36,6 +36,36 @@ services:
     environment:
       CI: 'true'
 
+  test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: npx tsx --test
+    profiles:
+      - test
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    environment:
+      CI: 'true'
+
+  deploy:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: >
+      sh -c "npx wrangler d1 migrations apply DB --remote --config wrangler.toml
+      && npx wrangler deploy --config wrangler.toml"
+    profiles:
+      - deploy
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    environment:
+      CI: 'true'
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
+
   download-feeds:
     build:
       context: .

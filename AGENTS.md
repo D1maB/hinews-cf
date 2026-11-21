@@ -60,9 +60,11 @@ Write clean, readable JavaScript as an experienced developer would:
 - Every behavioral change needs a test.
 - After changing source behavior, update the affected tests and run the full suite before committing.
 - Run `docker-compose run --rm test` before committing; all tests must pass.
+- Run `docker-compose run --rm tools npx tsc --noEmit` (or `make qa`, which also runs
+  Prettier, ESLint, and the tests) before committing; the project must typecheck.
 - Tests use the built-in `node:test` runner inside the container and live in `test/`.
 - Mock remote feeds in tests; never depend on the network.
-- Use the in-memory D1 stand-in (`test/fake-db.js`) instead of a real database.
+- Use the in-memory D1 stand-in (`test/fake-db.ts`) instead of a real database.
 - Test behavior and observable output, not implementation details.
 
 ## Database
@@ -71,8 +73,8 @@ Write clean, readable JavaScript as an experienced developer would:
 - Never edit a migration that has already been applied.
 - `items.url` is unique and writes use `INSERT OR IGNORE`; keep deduplication enforced by
   the database rather than application-side checks.
-- Keep SQL in `src/store.js`; parsing belongs in `src/feeds.js` and orchestration in
-  `src/ingest.js`.
+- Keep SQL in `src/store.ts`; parsing belongs in `src/feeds.ts` and orchestration in
+  `src/ingest.ts`.
 
 ## Infrastructure
 
@@ -104,7 +106,7 @@ All local infrastructure runs in Docker on Alpine:
 - Do not commit `node_modules`, `.wrangler`, `.env`, or other local runtime artifacts.
 - Docker is the only supported runtime. Do not add host-level Node, Wrangler, or test
   scripts.
-- Raw runtime commands (`npx wrangler`, `node --test`) live in `docker-compose.yml`.
+- Raw runtime commands (`npx wrangler`, `npx tsx --test`) live in `docker-compose.yml`.
 - Package scripts, if present, must only forward to Compose; never run Wrangler or
   tests on the host.
 - All documentation and automation must use Docker commands, never host commands.
@@ -116,6 +118,9 @@ All local infrastructure runs in Docker on Alpine:
 - Commit `.env.example` with empty values; never commit real credentials.
 - Never hardcode secrets in `docker-compose.yml`, source files, or scripts.
 - `docker-compose` loads `.env` automatically from the repository root.
+- `SCORE_API_KEY` is optional and must stay blank for keyless local endpoints; local
+  worker secrets belong in the ignored `.dev.vars` file.
+- Production secrets are set with `wrangler secret put` and read from `env`.
 
 ## Local development
 
@@ -128,8 +133,10 @@ All local infrastructure runs in Docker on Alpine:
   handler locally.
 - `docker-compose down` — stop and remove the containers.
 - `docker-compose run --rm test` — run the test suite.
-- `docker-compose run --rm deploy` — deploy using `CLOUDFLARE_API_TOKEN`.
+- `docker-compose run --rm tools npx tsc --noEmit` — typecheck the project.
+- `docker-compose run --rm deploy` — apply remote migrations and deploy using
+  `CLOUDFLARE_API_TOKEN`.
 
 Common tasks are also available as Makefile targets that forward to the Compose commands
 above: `make up`, `make down`, `make logs`, `make build`, `make feeds`, `make test`,
-`make scheduled`, and `make deploy`.
+`make typecheck`, `make qa`, `make scheduled`, and `make deploy`.
