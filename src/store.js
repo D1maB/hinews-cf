@@ -258,13 +258,14 @@ export async function deletePublished(db) {
  * the last scheduled time, so publishing happens at the scheduled moment.
  *
  * @param {D1Database} db
+ * @param {{ baseUrl?: string, model?: string, enabled?: boolean }} [options]
  * @returns {Promise<void>}
  */
-export async function backfillScores(db) {
+export async function backfillScores(db, options = {}) {
   const { results = [] } = await db.prepare(SELECT_UNSCORED).all();
 
   for (const row of results) {
-    await db.prepare(UPDATE_SCORE).bind(scoreTitle(row.title), row.url).run();
+    await db.prepare(UPDATE_SCORE).bind(await scoreTitle(row.title, options), row.url).run();
   }
 
   await db.prepare('DELETE FROM items WHERE score IS NOT NULL AND score <= ?').bind(MIN_SCORE).run();

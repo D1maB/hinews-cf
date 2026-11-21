@@ -4,6 +4,7 @@ import { backfillScores, deletePublished, getLastSync, listItems } from './store
 import { sortByScheduled } from './group.js';
 import { renderPage } from './render.js';
 import { getFeeds } from './feeds.js';
+import { getScoreOptions } from './score.js';
 
 /**
  * Renders the stored headlines, seeding the database on the first request.
@@ -21,7 +22,7 @@ async function handleRequest(_request, env) {
     items = result.items ?? items;
   }
 
-  await backfillScores(env.DB);
+  await backfillScores(env.DB, getScoreOptions(env));
 
   const lastSync = await getLastSync(env.DB);
 

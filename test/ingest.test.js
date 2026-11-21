@@ -36,6 +36,7 @@ function localEnv(overrides = {}) {
         return override instanceof Response ? override : new Response(override ?? rssFor(id));
       },
     },
+    SCORE_ENABLED: 'false',
   };
 }
 

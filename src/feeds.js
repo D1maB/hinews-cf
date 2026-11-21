@@ -1,5 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
-import { scoreTitle } from './score.js';
+import { getScoreOptions, scoreTitle } from './score.js';
 import { dedupByTitle } from './dedup.js';
 
 export const DEFAULT_FEEDS = [
@@ -106,7 +106,7 @@ export async function loadFeeds(env) {
 async function loadFeed(feed, env) {
   const xml = env.ASSETS ? await readLocalFeed(env.ASSETS, feed) : await fetchRemoteFeed(feed);
 
-  return { ...feed, items: parseRssItems(xml) };
+  return { ...feed, items: await parseRssItems(xml, getScoreOptions(env)) };
 }
 
 /**
@@ -143,12 +143,14 @@ async function fetchRemoteFeed(feed) {
 }
 
 /**
- * Extracts up to ITEMS_PER_FEED items from an RSS or Atom document.
+ * Extracts up to ITEMS_PER_FEED items from an RSS or Atom document, scoring
+ * each headline through the configured AI provider.
  *
  * @param {string} xml
- * @returns {Array<{ title: string, link: string, publishedAt: string }>}
+ * @param {{ baseUrl?: string, model?: string, enabled?: boolean } } [options]
+ * @returns {Promise<Array<{ title: string, link: string, publishedAt: string, score: number }>>}
  */
-export function parseRssItems(xml) {
+export async function parseRssItems(xml, options = {}) {
   const document = parser.parse(xml);
   const channel = document.rss?.channel ?? document.feed;
 
@@ -156,21 +158,22 @@ export function parseRssItems(xml) {
     return [];
   }
 
-  const items = toArray(channel.item ?? channel.entry)
-    .map((item) => {
+  const entries = toArray(channel.item ?? channel.entry);
+  const items = await Promise.all(
+    entries.map(async (item) => {
       const title = readText(item.title);
       const description = readText(item.description ?? item.summary ?? item.content ?? item.subtitle);
       return {
         title,
         link: normalizeLink(readLink(item.link)),
         publishedAt: readText(item.pubDate ?? item.published ?? item.updated),
-        score: scoreTitle(title),
+        score: await scoreTitle(title, options),
         ...(description ? { description: truncateToSentence(description, 300) } : {}),
       };
-    })
-    .filter(({ title, link }) => title && link);
+    }),
+  );
 
-  return dedupByTitle(items).slice(0, ITEMS_PER_FEED);
+  return dedupByTitle(items).filter(({ title, link }) => title && link).slice(0, ITEMS_PER_FEED);
 }
 
 /**

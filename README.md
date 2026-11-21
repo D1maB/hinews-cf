@@ -34,6 +34,9 @@ cp .env.example .env
 | `TELEGRAM_ENABLED`      | Set to `true` to publish headlines to Telegram      |
 | `TELEGRAM_BOT_TOKEN`    | Telegram bot token used to publish                  |
 | `TELEGRAM_CHAT_ID`      | Telegram chat/channel id used to publish           |
+| `SCORE_BASE_URL`        | AI scoring endpoint, e.g. Ollama (`http://localhost:11434/v1`) locally or a remote API in production |
+| `SCORE_MODEL`           | AI model used for headline scoring, e.g. `llama3.2` locally or `gpt-4o-mini` in production |
+| `SCORE_ENABLED`         | Set to `false` to fall back to keyword scoring       |
 
 `.env` is ignored by Git and Docker. `docker-compose` loads it automatically when run
 from the repository root. Commit only `.env.example`.

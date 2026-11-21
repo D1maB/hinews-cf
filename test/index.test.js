@@ -50,7 +50,7 @@ test('renders every stored item from the database', async () => {
     published_at: '2024-01-01T00:00:00.000Z',
   }));
 
-  const response = await worker.fetch(REQUEST, { DB: createFakeDb(rows) });
+  const response = await worker.fetch(REQUEST, { DB: createFakeDb(rows), SCORE_ENABLED: 'false' });
   const html = await response.text();
 
   assert.equal(response.status, 200);
@@ -84,7 +84,9 @@ test('renders all stored items in a single list with source notes sorted by sche
     },
   ]);
 
-  const html = await (await worker.fetch(REQUEST, { DB: db })).text();
+  const env = { DB: db, SCORE_ENABLED: 'false' };
+
+  const html = await (await worker.fetch(REQUEST, env)).text();
 
   assert.doesNotMatch(html, /<section class="feed">/);
 
@@ -103,7 +105,7 @@ test('seeds the database on the first request and reuses it afterwards', async (
   t.mock.method(console, 'log', () => {});
   const db = createFakeDb();
   const assets = localAssets();
-  const env = { ...assets, DB: db };
+  const env = { ...assets, DB: db, SCORE_ENABLED: 'false' };
 
   const first = await (await worker.fetch(REQUEST, env)).text();
   const fetchesAfterFirstRequest = assets.fetches();
@@ -149,7 +151,7 @@ test('scheduled runs append fresh items without clearing existing ones', async (
       score: 60,
     },
   ]);
-  const env = { ...localAssets(), DB: db };
+  const env = { ...localAssets(), DB: db, SCORE_ENABLED: 'false' };
   let pending;
 
   worker.scheduled({ cron: '0 */12 * * *' }, env, {

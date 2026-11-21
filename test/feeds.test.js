@@ -31,8 +31,8 @@ function rssFor(feedId) {
   return RSS.replaceAll('https://example.com/', `https://example.com/${feedId}/`);
 }
 
-test('parses RSS items, decoding entities and dropping unsafe rows', () => {
-  const items = parseRssItems(RSS);
+test('parses RSS items, decoding entities and dropping unsafe rows', async () => {
+  const items = await parseRssItems(RSS, { enabled: false });
 
   assert.deepEqual(items, [
     {
@@ -62,6 +62,7 @@ test('loads every feed from local storage', async (t) => {
         return new Response(rssFor(url.pathname.slice(1, -4)));
       },
     },
+    SCORE_ENABLED: 'false',
   };
 
   const feeds = await loadFeeds(env);
@@ -78,7 +79,7 @@ test('fetches remote feeds when no assets binding exists', async (t) => {
     return new Response(RSS);
   });
 
-  await loadFeeds({});
+  await loadFeeds({ SCORE_ENABLED: 'false' });
 
   assert.deepEqual(requestedUrls.sort(), FEEDS.map((feed) => feed.url).sort());
 });
@@ -91,6 +92,7 @@ test('keeps loading other feeds when a local feed is missing', async () => {
           ? new Response('missing', { status: 404 })
           : new Response(RSS),
     },
+    SCORE_ENABLED: 'false',
   };
 
   const feeds = await loadFeeds(env);

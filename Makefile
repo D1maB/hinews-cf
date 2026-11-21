@@ -36,7 +36,7 @@ migrate:
 help:
 	@echo "hinews-cf - local development commands"
 	@echo ""
-	@echo "  make up        - build and start the worker (http://localhost:8787)"
+	@echo "  make up         - build and start the worker (http://localhost:8787)"
 	@echo "  make down       - stop and remove containers"
 	@echo "  make logs       - follow worker logs"
 	@echo "  make build      - rebuild the app image"
