@@ -184,8 +184,23 @@ async function readLocalFeed(
 }
 
 async function fetchRemoteFeed(feed: { url: string }): Promise<string> {
-  const response = await fetch(feed.url);
-  return response.text();
+  const maxAttempts = 3;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const response = await fetch(feed.url, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return await response.text();
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('Feed fetch failed');
 }
 
 export async function loadFeed(
