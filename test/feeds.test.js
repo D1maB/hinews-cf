@@ -41,13 +41,13 @@ test('parses RSS items, decoding entities and dropping unsafe rows', async (t) =
       title: 'RTX 5090 review & benchmarks',
       link: 'https://example.com/rtx-5090?a=1&b=2',
       publishedAt: 'Mon, 01 Jan 2024 12:00:00 GMT',
-      score: 82,
+      score: null,
     },
     {
       title: "Ryzen 9950X is 'great'",
       link: 'https://example.com/ryzen-9950x',
       publishedAt: 'Tue, 02 Jan 2024 12:00:00 GMT',
-      score: 82,
+      score: null,
     },
   ]);
 });
@@ -68,7 +68,7 @@ test('loads every feed from local storage', async (t) => {
 
   const feeds = await loadFeeds(env);
 
-  assert.equal(aiFetch.mock.callCount(), FEEDS.length * 3);
+  assert.equal(aiFetch.mock.callCount(), 0);
   assert.equal(feeds.length, FEEDS.length);
   assert.ok(feeds.every((feed) => feed.items.length === 2));
 });

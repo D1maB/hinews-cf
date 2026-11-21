@@ -1,5 +1,4 @@
 import { loadFeeds, toIsoDate } from './feeds.js';
-import { MIN_SCORE } from './score.js';
 import { saveItems, setLastSync, getLastScheduledAt, buildScheduledAt } from './store.js';
 import { dedupItems } from './dedup.js';
 
@@ -34,7 +33,6 @@ export async function ingestFeeds(env) {
   const SPONSORED_REGEX = /\b(pr|ad|collab|sponsored)\b/i;
 
   const deduped = dedupItems(items).filter((item) => {
-    if (item.score == null || item.score <= MIN_SCORE) return false;
     const textToCheck = `${item.title} ${item.description ?? ''}`;
     return !SPONSORED_REGEX.test(textToCheck);
   });

@@ -1,5 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
-import { getScoreOptions, scoreTitle } from './score.js';
+import { getScoreOptions } from './score.js';
 import { dedupByTitle } from './dedup.js';
 
 export const DEFAULT_FEEDS = [
@@ -167,7 +167,7 @@ export async function parseRssItems(xml, options = {}) {
         title,
         link: normalizeLink(readLink(item.link)),
         publishedAt: readText(item.pubDate ?? item.published ?? item.updated),
-        score: await scoreTitle(title, options),
+        score: null,
         ...(description ? { description: truncateToSentence(description, 300) } : {}),
       };
     }),
