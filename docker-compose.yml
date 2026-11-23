@@ -4,14 +4,13 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    command: sh -c "npx wrangler d1 migrations apply DB --local --config wrangler.dev.toml && npx wrangler dev --config wrangler.dev.toml --ip 0.0.0.0 --port 8787 --test-scheduled"
+    command: sh -c "npx wrangler d1 migrations apply DB --local --config wrangler.dev.toml && npx wrangler dev --config wrangler.dev.toml --ip 0.0.0.0 --port 8787 --test-scheduled --var GEMINI_API_KEY:$GEMINI_API_KEY --var GEMINI_MODEL:$GEMINI_MODEL --var NEWS_ITEM_COUNT:$NEWS_ITEM_COUNT"
     ports:
       - '8787:8787'
     environment:
       CI: 'true'
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-}
-      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-}
       NEWS_ITEM_COUNT: ${NEWS_ITEM_COUNT:-}
     volumes:
       - .:/app
@@ -36,7 +35,6 @@ services:
       CI: 'true'
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-}
-      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-}
       NEWS_ITEM_COUNT: ${NEWS_ITEM_COUNT:-}
 
   test:

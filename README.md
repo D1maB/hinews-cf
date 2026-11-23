@@ -37,7 +37,6 @@ cp .env.example .env
 | `TELEGRAM_CHAT_ID`      | Telegram chat/channel id used to publish                     |
 | `GEMINI_API_KEY`        | Gemini API key used to search the web and score the articles |
 | `GEMINI_MODEL`          | Gemini model used for the search, e.g. `gemini-3.6-flash`    |
-| `GEMINI_BASE_URL`       | Optional Gemini API endpoint override                        |
 | `NEWS_ITEM_COUNT`       | How many articles to request per ingestion (default `20`)    |
 
 `.env` is ignored by Git and Docker. `docker-compose` loads it automatically when run

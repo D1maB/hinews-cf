@@ -29,35 +29,37 @@ function geminiResponse(content: string): Response {
   );
 }
 
-test('getSearchOptions rejects empty configuration', () => {
+test('getSearchOptions rejects missing configuration', () => {
+  assert.throws(() => getSearchOptions({}), /GEMINI_API_KEY/);
   assert.throws(
-    () => getSearchOptions({ GEMINI_BASE_URL: '   ' }),
-    /GEMINI_BASE_URL/,
+    () => getSearchOptions({ GEMINI_API_KEY: 'secret-key' }),
+    /GEMINI_MODEL/,
   );
   assert.throws(
-    () => getSearchOptions({ GEMINI_MODEL: '   ' }),
+    () =>
+      getSearchOptions({ GEMINI_API_KEY: 'secret-key', GEMINI_MODEL: '   ' }),
     /GEMINI_MODEL/,
+  );
+  assert.throws(
+    () =>
+      getSearchOptions({
+        GEMINI_API_KEY: '   ',
+        GEMINI_MODEL: 'gemini-3.6-flash',
+      }),
+    /GEMINI_API_KEY/,
   );
 });
 
-test('getSearchOptions applies the Gemini defaults', () => {
-  assert.deepEqual(getSearchOptions({}), {
-    baseUrl: 'https://generativelanguage.googleapis.com',
-    model: 'gemini-3.6-flash',
-    itemCount: DEFAULT_NEWS_ITEM_COUNT,
-  });
-
+test('getSearchOptions requires the API key and model', () => {
   assert.deepEqual(
     getSearchOptions({
-      GEMINI_BASE_URL: 'http://localhost:8080',
-      GEMINI_MODEL: 'gemini-3-flash',
       GEMINI_API_KEY: '  secret-key  ',
-      NEWS_ITEM_COUNT: '35',
+      GEMINI_MODEL: 'gemini-3.6-flash',
     }),
     {
-      baseUrl: 'http://localhost:8080',
-      model: 'gemini-3-flash',
-      itemCount: 35,
+      baseUrl: 'https://generativelanguage.googleapis.com',
+      model: 'gemini-3.6-flash',
+      itemCount: DEFAULT_NEWS_ITEM_COUNT,
       apiKey: 'secret-key',
     },
   );
@@ -65,11 +67,21 @@ test('getSearchOptions applies the Gemini defaults', () => {
 
 test('getSearchOptions rejects an invalid item count', () => {
   assert.throws(
-    () => getSearchOptions({ NEWS_ITEM_COUNT: '0' }),
+    () =>
+      getSearchOptions({
+        GEMINI_API_KEY: 'secret-key',
+        GEMINI_MODEL: 'gemini-3.6-flash',
+        NEWS_ITEM_COUNT: '0',
+      }),
     /NEWS_ITEM_COUNT/,
   );
   assert.throws(
-    () => getSearchOptions({ NEWS_ITEM_COUNT: 'ten' }),
+    () =>
+      getSearchOptions({
+        GEMINI_API_KEY: 'secret-key',
+        GEMINI_MODEL: 'gemini-3.6-flash',
+        NEWS_ITEM_COUNT: 'ten',
+      }),
     /NEWS_ITEM_COUNT/,
   );
 });

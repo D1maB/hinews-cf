@@ -129,7 +129,10 @@ test('scheduled runs store fresh items', async (t) => {
   const db = createFakeDb();
   mockSearch(t);
 
-  await runScheduled({ DB: db, GEMINI_API_KEY: 'secret-key' }, '0 */12 * * *');
+  await runScheduled(
+    { DB: db, GEMINI_API_KEY: 'secret-key', GEMINI_MODEL: 'gemini-3.6-flash' },
+    '0 */12 * * *',
+  );
 
   assert.equal(db.rows.size, ARTICLES.length);
 });
@@ -150,7 +153,10 @@ test('scheduled runs append fresh items without clearing existing ones', async (
   ]);
   mockSearch(t);
 
-  await runScheduled({ DB: db, GEMINI_API_KEY: 'secret-key' }, '0 */12 * * *');
+  await runScheduled(
+    { DB: db, GEMINI_API_KEY: 'secret-key', GEMINI_MODEL: 'gemini-3.6-flash' },
+    '0 */12 * * *',
+  );
 
   assert.equal(db.rows.size, ARTICLES.length + 1);
 });

@@ -5,7 +5,6 @@ import type { FeedConfig, SearchItem } from './types.js';
 
 export const DEFAULT_GEMINI_BASE_URL =
   'https://generativelanguage.googleapis.com';
-export const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash';
 export const DEFAULT_NEWS_ITEM_COUNT = 20;
 export const MIN_SCORE = 1;
 export const MAX_SCORE = 100;
@@ -22,7 +21,6 @@ export interface SearchConfig {
 export interface SearchEnv {
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
-  GEMINI_BASE_URL?: string;
   NEWS_ITEM_COUNT?: string;
 }
 
@@ -37,21 +35,20 @@ function parseItemCount(value: string | undefined): number {
 
 /** Read the Gemini configuration, applying defaults and validating non-empty values. */
 export function getSearchOptions(env: SearchEnv = {}): SearchConfig {
-  const baseUrl = (env.GEMINI_BASE_URL || DEFAULT_GEMINI_BASE_URL).trim();
-  const model = (env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL).trim();
+  const model = (env.GEMINI_MODEL || '').trim();
   const apiKey = env.GEMINI_API_KEY?.trim();
-  if (!baseUrl) {
-    throw new Error('GEMINI_BASE_URL must not be empty');
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY must not be empty');
   }
   if (!model) {
     throw new Error('GEMINI_MODEL must not be empty');
   }
   console.log(`Using Gemini model ${model}`);
   return {
-    baseUrl,
+    baseUrl: DEFAULT_GEMINI_BASE_URL,
     model,
     itemCount: parseItemCount(env.NEWS_ITEM_COUNT),
-    ...(apiKey ? { apiKey } : {}),
+    apiKey,
   };
 }
 
@@ -103,7 +100,16 @@ export async function searchNews(
   env: SearchEnv,
   sources: FeedConfig[],
 ): Promise<SearchItem[]> {
-  const options = getSearchOptions(env);
+  let options: SearchConfig;
+  try {
+    options = getSearchOptions(env);
+  } catch (error) {
+    console.error(
+      'Gemini search is not configured:',
+      error instanceof Error ? error.message : error,
+    );
+    return [];
+  }
   if (!options.apiKey) {
     console.error('GEMINI_API_KEY is not configured');
     return [];

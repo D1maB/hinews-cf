@@ -47,7 +47,11 @@ function mockSearch(t: TestContext, items: unknown = ARTICLES): void {
 }
 
 function envWith(db: Env['DB']): Env {
-  return { DB: db, GEMINI_API_KEY: 'secret-key' };
+  return {
+    DB: db,
+    GEMINI_API_KEY: 'secret-key',
+    GEMINI_MODEL: 'gemini-3.6-flash',
+  };
 }
 
 test('stores scored AI search results with their sources', async (t) => {

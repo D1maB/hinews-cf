@@ -5,7 +5,6 @@ const items = await searchNews(
   {
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     GEMINI_MODEL: process.env.GEMINI_MODEL,
-    GEMINI_BASE_URL: process.env.GEMINI_BASE_URL,
     NEWS_ITEM_COUNT: process.env.NEWS_ITEM_COUNT,
   },
   DEFAULT_FEEDS,

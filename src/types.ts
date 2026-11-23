@@ -64,7 +64,6 @@ export interface Env {
   FEEDS?: string;
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
-  GEMINI_BASE_URL?: string;
   NEWS_ITEM_COUNT?: string;
   TELEGRAM_ENABLED?: string | boolean;
   TELEGRAM_BOT_TOKEN?: string;
