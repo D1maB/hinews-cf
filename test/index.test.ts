@@ -2,48 +2,38 @@ import assert from 'node:assert/strict';
 import test, { type TestContext } from 'node:test';
 
 import worker from '../src/index.ts';
-import { DEFAULT_FEEDS } from '../src/feeds.ts';
 import { createFakeDb } from './fake-db.ts';
 import type { Env } from '../src/types.ts';
 
 const REQUEST = new Request('https://example.com/');
 
-function rssFor(feedId: string): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
-  <channel>
-    <item>
-      <title>${feedId} PC GPU benchmark</title>
-      <link>https://example.com/${feedId}/story</link>
-      <pubDate>Mon, 01 Jan 2024 12:00:00 GMT</pubDate>
-    </item>
-  </channel>
-</rss>`;
-}
+const ARTICLES = [
+  {
+    title: 'RTX 5090 review',
+    description: 'A deep dive into the new flagship GPU.',
+    source: "Tom's Hardware",
+    url: 'https://www.tomshardware.com/reviews/rtx-5090',
+    score: 90,
+  },
+  {
+    title: 'Ryzen 9950X benchmarks',
+    description: 'The new CPU in our test bench.',
+    source: 'TechPowerUp',
+    url: 'https://www.techpowerup.com/review/ryzen-9950x',
+    score: 75,
+  },
+];
 
-function localAssets(): Pick<Env, 'ASSETS'> & { fetches: () => number } {
-  let fetches = 0;
-
-  return {
-    ASSETS: {
-      fetch: async (input: RequestInfo | URL) => {
-        fetches += 1;
-        const url = new URL(String(input));
-        return new Response(rssFor(url.pathname.slice(1, -4)));
-      },
-    },
-    fetches: () => fetches,
-  };
-}
-
-function mockScoring(t: TestContext): void {
+function mockSearch(t: TestContext, items: unknown = ARTICLES): void {
   t.mock.method(
     globalThis,
     'fetch',
     async () =>
       new Response(
         JSON.stringify({
-          choices: [{ message: { content: '{"score": 82}' } }],
+          candidates: [
+            { content: { parts: [{ text: JSON.stringify(items) }] } },
+          ],
         }),
         { status: 200 },
       ),
@@ -78,7 +68,7 @@ test('renders every stored item from the database', async () => {
 
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type') ?? '', /^text\/html/);
-  assert.match(html, /7 stored headlines from 8 RSS feeds/);
+  assert.match(html, /7 stored headlines from 8 sources via AI web search/);
 
   for (const row of rows) {
     assert.ok(html.includes(row.title), `missing ${row.title}`);
@@ -126,37 +116,22 @@ test('renders all stored items in a single list with source notes sorted by sche
 
 test('renders an empty page when the database has no items yet', async () => {
   const db = createFakeDb();
-  const assets = localAssets();
-  const env = {
-    ...assets,
-    DB: db,
-  };
 
-  const first = await (await worker.fetch(REQUEST, env)).text();
-  const fetchesAfterFirstRequest = assets.fetches();
+  const first = await (await worker.fetch(REQUEST, { DB: db })).text();
 
   assert.equal(db.rows.size, 0);
   assert.match(first, /0 stored headlines/);
-  assert.equal(fetchesAfterFirstRequest, 0);
   assert.match(first, /Last sync: never/);
-
-  await worker.fetch(REQUEST, env);
-
-  assert.equal(assets.fetches(), fetchesAfterFirstRequest);
 });
 
 test('scheduled runs store fresh items', async (t) => {
   t.mock.method(console, 'log', () => {});
   const db = createFakeDb();
-  const env = {
-    ...localAssets(),
-    DB: db,
-  };
-  mockScoring(t);
+  mockSearch(t);
 
-  await runScheduled(env, '0 */12 * * *');
+  await runScheduled({ DB: db, GEMINI_API_KEY: 'secret-key' }, '0 */12 * * *');
 
-  assert.equal(db.rows.size, DEFAULT_FEEDS.length);
+  assert.equal(db.rows.size, ARTICLES.length);
 });
 
 test('scheduled runs append fresh items without clearing existing ones', async (t) => {
@@ -173,15 +148,11 @@ test('scheduled runs append fresh items without clearing existing ones', async (
       score: 80,
     },
   ]);
-  const env = {
-    ...localAssets(),
-    DB: db,
-  };
-  mockScoring(t);
+  mockSearch(t);
 
-  await runScheduled(env, '0 */12 * * *');
+  await runScheduled({ DB: db, GEMINI_API_KEY: 'secret-key' }, '0 */12 * * *');
 
-  assert.equal(db.rows.size, DEFAULT_FEEDS.length + 1);
+  assert.equal(db.rows.size, ARTICLES.length + 1);
 });
 
 test('scheduled cleanup removes published items every 7 days', async (t) => {
@@ -208,9 +179,8 @@ test('scheduled cleanup removes published items every 7 days', async (t) => {
       score: 70,
     },
   ]);
-  const env = { ...localAssets(), DB: db };
 
-  await runScheduled(env, '0 0 */7 * *');
+  await runScheduled({ DB: db }, '0 0 */7 * *');
 
   assert.equal(db.rows.size, 1);
   assert.ok(!db.rows.has('https://example.com/published'));

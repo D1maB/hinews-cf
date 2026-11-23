@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { backfillScores, deletePublished, saveItems } from '../src/store.ts';
+import { deletePublished, saveItems } from '../src/store.ts';
 import { createFakeDb } from './fake-db.ts';
 import type { NewItem } from '../src/types.ts';
 
@@ -16,77 +16,6 @@ function makeItem(overrides: Partial<NewItem> = {}): NewItem {
     ...overrides,
   };
 }
-
-test('schedules unscheduled items across one 12 hour window from the last scheduled time', async (t) => {
-  t.mock.method(console, 'log', () => {});
-  const db = createFakeDb([
-    {
-      feed_id: 'kitguru',
-      feed_name: 'KitGuru',
-      title: 'KitGuru pc gpu benchmark',
-      url: 'https://example.com/kitguru',
-      published_at: '2024-01-01T00:00:00.000Z',
-      status: 'published',
-      scheduled_at: '2026-11-02T12:00:00.000Z',
-      score: 80,
-    },
-    {
-      feed_id: 'aaa',
-      feed_name: 'Aaa Feed',
-      title: 'Aaa pc gpu benchmark',
-      url: 'https://example.com/aaa',
-      published_at: '2024-01-02T00:00:00.000Z',
-      status: 'new',
-      score: 70,
-    },
-    {
-      feed_id: 'bbb',
-      feed_name: 'Bbb Feed',
-      title: 'Bbb pc gpu benchmark',
-      url: 'https://example.com/bbb',
-      published_at: '2024-01-03T00:00:00.000Z',
-      status: 'new',
-      score: 80,
-    },
-  ]);
-
-  await backfillScores(db);
-
-  const first = db.rows.get('https://example.com/aaa');
-  const second = db.rows.get('https://example.com/bbb');
-
-  assert.equal(first?.scheduled_at, '2026-11-02T18:00:00.000Z');
-  assert.equal(second?.scheduled_at, '2026-11-03T00:00:00.000Z');
-});
-
-test('drops items scoring at or below the minimum', async (t) => {
-  t.mock.method(console, 'log', () => {});
-  const db = createFakeDb([
-    {
-      feed_id: 'kitguru',
-      feed_name: 'KitGuru',
-      title: 'Low score story',
-      url: 'https://example.com/low',
-      published_at: '2024-01-01T00:00:00.000Z',
-      status: 'scheduled',
-      score: 60,
-    },
-    {
-      feed_id: 'kitguru',
-      feed_name: 'KitGuru',
-      title: 'High score story',
-      url: 'https://example.com/high',
-      published_at: '2024-01-02T00:00:00.000Z',
-      status: 'scheduled',
-      score: 61,
-    },
-  ]);
-
-  await backfillScores(db);
-
-  assert.equal(db.rows.has('https://example.com/low'), false);
-  assert.ok(db.rows.has('https://example.com/high'));
-});
 
 test('saveItems persists the description and target flags', async () => {
   const db = createFakeDb();
@@ -117,6 +46,33 @@ test('saveItems skips duplicate URLs and titles', async () => {
 
   assert.equal(inserted, 1);
   assert.equal(db.rows.size, 1);
+});
+
+test('saveItems skips URLs that already exist in the database', async () => {
+  const db = createFakeDb([
+    {
+      feed_id: 'kitguru',
+      feed_name: 'KitGuru',
+      title: 'Old story',
+      url: 'https://example.com/kitguru',
+      published_at: '2024-01-01T00:00:00.000Z',
+      status: 'scheduled',
+      score: 80,
+    },
+  ]);
+
+  const inserted = await saveItems(db, [
+    makeItem(),
+    makeItem({
+      title: 'Fresh story',
+      url: 'https://example.com/fresh',
+    }),
+  ]);
+
+  assert.equal(inserted, 1);
+  assert.equal(db.rows.size, 2);
+  assert.equal(db.rows.get('https://example.com/kitguru')?.title, 'Old story');
+  assert.ok(db.rows.has('https://example.com/fresh'));
 });
 
 test('deletes only published items', async (t) => {

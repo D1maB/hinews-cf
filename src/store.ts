@@ -1,6 +1,3 @@
-import { normalizeTitle } from './dedup.js';
-import { scoreTitle, MIN_SCORE } from './score.js';
-import type { ScoreConfig } from './score.js';
 import type { Database, NewItem, PublishTarget, StoredItem } from './types.js';
 
 const SCHEDULE_WINDOW_MINUTES = 12 * 60;
@@ -16,21 +13,12 @@ const LIST_ITEMS = `
   ORDER BY id
 `;
 
-const SELECT_URLS = `
-  SELECT url, title
-  FROM items
-`;
+const SELECT_URLS = `SELECT url FROM items`;
 
 const GET_META = `SELECT value FROM meta WHERE key = ?`;
 const SET_META = `INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`;
 
 const SELECT_SCHEDULED_AT = `SELECT scheduled_at FROM items`;
-const SELECT_UNSCORED = `SELECT url, title FROM items WHERE score IS NULL`;
-const SELECT_SCHEDULE = `SELECT url, scheduled_at FROM items`;
-const DELETE_LOW_SCORES = `DELETE FROM items WHERE score IS NOT NULL AND score <= ?`;
-const NORMALIZE_STATUS = `UPDATE items SET status = 'scheduled' WHERE status IS NULL OR status = 'new'`;
-const UPDATE_SCORE = `UPDATE items SET score = ? WHERE url = ?`;
-const UPDATE_SCHEDULED_AT = `UPDATE items SET scheduled_at = ? WHERE url = ?`;
 const DELETE_PUBLISHED = "DELETE FROM items WHERE status = 'published'";
 const MARK_ITEM_PUBLISHED =
   "UPDATE items SET status = 'published' WHERE url = ? AND status = 'scheduled'";
@@ -41,7 +29,8 @@ const MARK_TARGET_PUBLISHED: Record<PublishTarget, string> = {
 };
 
 /**
- * Store new items, skipping URLs and titles that already exist.
+ * Store new items, skipping URLs that already exist in the database.
+ * Duplicate titles are still ignored by the database's unique constraint.
  * Returns the number of rows actually inserted.
  */
 export async function saveItems(
@@ -50,28 +39,11 @@ export async function saveItems(
 ): Promise<number> {
   if (items.length === 0) return 0;
 
-  const { results } = await db
-    .prepare(SELECT_URLS)
-    .all<{ url: string; title: string }>();
-  const existingUrls = new Set(results.map((row) => row.url));
-  const existingTitles = new Set(
-    results.map((row) => normalizeTitle(row.title)),
-  );
-
-  const seenUrls = new Set<string>();
-  const seenTitles = new Set<string>();
+  const { results } = await db.prepare(SELECT_URLS).all<{ url: string }>();
+  const seenUrls = new Set(results.map((row) => row.url));
   const newItems = items.filter((item) => {
-    const titleKey = normalizeTitle(item.title);
-    if (
-      existingUrls.has(item.url) ||
-      existingTitles.has(titleKey) ||
-      seenUrls.has(item.url) ||
-      seenTitles.has(titleKey)
-    ) {
-      return false;
-    }
+    if (seenUrls.has(item.url)) return false;
     seenUrls.add(item.url);
-    seenTitles.add(titleKey);
     return true;
   });
 
@@ -176,46 +148,4 @@ export function buildScheduledAt(
 export async function deletePublished(db: Database): Promise<number> {
   const result = await db.prepare(DELETE_PUBLISHED).run();
   return result.meta.changes ?? 0;
-}
-
-/**
- * Score unscheduled/unscored items, drop low-scoring ones, and assign
- * publication times using batched writes.
- */
-export async function backfillScores(
-  db: Database,
-  options: Partial<ScoreConfig> = {},
-): Promise<void> {
-  const { results: unscored } = await db
-    .prepare(SELECT_UNSCORED)
-    .all<{ url: string; title: string }>();
-
-  const scoreStatements = [];
-  for (const row of unscored) {
-    const score = await scoreTitle(row.title, options);
-    scoreStatements.push(db.prepare(UPDATE_SCORE).bind(score, row.url));
-  }
-  if (scoreStatements.length > 0) {
-    await db.batch(scoreStatements);
-  }
-
-  await db.batch([
-    db.prepare(DELETE_LOW_SCORES).bind(MIN_SCORE),
-    db.prepare(NORMALIZE_STATUS),
-  ]);
-
-  const { results: allRows } = await db
-    .prepare(SELECT_SCHEDULE)
-    .all<{ url: string; scheduled_at: string | null }>();
-  const unscheduled = allRows.filter((row) => !row.scheduled_at);
-  if (unscheduled.length === 0) return;
-
-  const last = await getLastScheduledAt(db);
-  const baseTime = last ? new Date(last).getTime() : Date.now();
-  const scheduleStatements = unscheduled.map((row, index) =>
-    db
-      .prepare(UPDATE_SCHEDULED_AT)
-      .bind(buildScheduledAt(baseTime, index, unscheduled.length), row.url),
-  );
-  await db.batch(scheduleStatements);
 }

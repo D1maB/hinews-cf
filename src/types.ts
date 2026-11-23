@@ -4,17 +4,14 @@ export interface FeedConfig {
   url: string;
 }
 
-export interface ParsedItem {
+/** A news article returned by the AI web search. */
+export interface SearchItem {
   title: string;
-  link: string;
-  publishedAt: string;
-  score: number | null;
-  description?: string;
+  description: string;
+  source: string;
+  url: string;
+  score: number;
 }
-
-export type LoadedFeed =
-  | (FeedConfig & { status: 'ok'; items: ParsedItem[] })
-  | (FeedConfig & { status: 'error'; items: []; error: string });
 
 export interface NewItem {
   feedId: string;
@@ -62,17 +59,13 @@ export interface Database {
   batch(statements: DbStatement[]): Promise<DbRunResult[]>;
 }
 
-export interface AssetFetcher {
-  fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
-}
-
 export interface Env {
   DB: Database;
-  ASSETS?: AssetFetcher;
   FEEDS?: string;
-  SCORE_BASE_URL?: string;
-  SCORE_MODEL?: string;
-  SCORE_API_KEY?: string;
+  GEMINI_API_KEY?: string;
+  GEMINI_MODEL?: string;
+  GEMINI_BASE_URL?: string;
+  NEWS_ITEM_COUNT?: string;
   TELEGRAM_ENABLED?: string | boolean;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;

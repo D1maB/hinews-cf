@@ -1,18 +1,18 @@
-import { loadFeeds, toIsoDate } from './feeds.js';
+import { getFeeds } from './feeds.js';
+import { searchNews } from './search.js';
 import {
   saveItems,
   setLastSync,
   getLastScheduledAt,
   buildScheduledAt,
 } from './store.js';
-import { dedupItems } from './dedup.js';
-import type { Env, LoadedFeed, NewItem } from './types.js';
+import type { Env, FeedConfig, NewItem } from './types.js';
 
 const SPONSORED_REGEX = /\b(pr|ad|collab|sponsored)\b/i;
 
 export interface IngestResult {
   inserted: number;
-  feeds: LoadedFeed[];
+  sources: FeedConfig[];
   items: Array<{
     feed_id: string;
     feed_name: string;
@@ -24,29 +24,62 @@ export interface IngestResult {
   }>;
 }
 
-/** Fetch all configured feeds, deduplicate, and store new headlines. */
-export async function ingestFeeds(env: Env): Promise<IngestResult> {
-  const feeds = await loadFeeds(env);
-
-  for (const feed of feeds) {
-    if (feed.status === 'error') {
-      console.error(`Failed to load ${feed.name}: ${feed.error}`);
-    }
+function hostOf(value: string): string {
+  try {
+    return new URL(value).hostname.replace(/^www\./i, '').toLowerCase();
+  } catch {
+    return '';
   }
+}
 
-  const items: NewItem[] = feeds.flatMap((feed) =>
-    feed.items.map((item) => ({
-      feedId: feed.id,
-      feedName: feed.name,
-      title: item.title,
-      url: item.link,
-      publishedAt: toIsoDate(item.publishedAt),
-      score: item.score,
-      description: item.description,
-    })),
+function slugify(value: string): string {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'unknown'
   );
+}
 
-  const deduped = dedupItems(items).filter((item) => {
+/** Match an AI result to one of the configured source sites. */
+function resolveSource(
+  name: string,
+  url: string,
+  sources: FeedConfig[],
+): FeedConfig {
+  const lowerName = name.toLowerCase();
+  const byName = sources.find(
+    (source) => source.name.toLowerCase() === lowerName,
+  );
+  if (byName) return byName;
+
+  const host = hostOf(url);
+  const byHost = sources.find((source) => hostOf(source.url) === host);
+  if (byHost) return byHost;
+
+  const fallbackName = name || host || 'Unknown';
+  return { id: slugify(fallbackName), name: fallbackName, url };
+}
+
+/** Search the web for the latest news, score it, and store new headlines. */
+export async function ingestNews(env: Env): Promise<IngestResult> {
+  const sources = getFeeds(env);
+  const found = await searchNews(env, sources);
+
+  const items: NewItem[] = found.map((item) => {
+    const source = resolveSource(item.source, item.url, sources);
+    return {
+      feedId: source.id,
+      feedName: source.name,
+      title: item.title,
+      url: item.url,
+      publishedAt: new Date().toISOString(),
+      score: item.score,
+      description: item.description || undefined,
+    };
+  });
+
+  const candidates = items.filter((item) => {
     const textToCheck = `${item.title} ${item.description ?? ''}`;
     return !SPONSORED_REGEX.test(textToCheck);
   });
@@ -55,20 +88,20 @@ export async function ingestFeeds(env: Env): Promise<IngestResult> {
   const baseTime = lastScheduledAt
     ? new Date(lastScheduledAt).getTime()
     : Date.now();
-  const prepared = deduped.map((item, index) => ({
+  const prepared = candidates.map((item, index) => ({
     ...item,
-    scheduledAt: buildScheduledAt(baseTime, index, deduped.length),
+    scheduledAt: buildScheduledAt(baseTime, index, candidates.length),
   }));
 
   const inserted = await saveItems(env.DB, prepared);
 
   await setLastSync(env.DB, new Date().toISOString());
 
-  console.log(`Stored ${inserted} new item(s) from ${feeds.length} feeds`);
+  console.log(`Stored ${inserted} new item(s) from AI web search`);
 
   return {
     inserted,
-    feeds,
+    sources,
     items: prepared.map((item) => ({
       feed_id: item.feedId,
       feed_name: item.feedName,

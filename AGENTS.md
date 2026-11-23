@@ -52,8 +52,8 @@ Write clean, readable JavaScript as an experienced developer would:
 - Keep the code self-explanatory; comment only the "why", not the "what".
 - Keep the worker stateless and platform-native (Web APIs such as `Request`, `Response`,
   `fetch`).
-- Do not add dependencies unless they clearly pay for themselves. `fast-xml-parser` is
-  the supported RSS/Atom parser; do not reintroduce hand-written XML parsing.
+- Do not add dependencies unless they clearly pay for themselves. Use the built-in
+  `fetch` and Web APIs instead of adding HTTP or AI client libraries.
 
 ## Testing
 
@@ -63,7 +63,7 @@ Write clean, readable JavaScript as an experienced developer would:
 - Run `docker-compose run --rm tools npx tsc --noEmit` (or `make qa`, which also runs
   Prettier, ESLint, and the tests) before committing; the project must typecheck.
 - Tests use the built-in `node:test` runner inside the container and live in `test/`.
-- Mock remote feeds in tests; never depend on the network.
+- Mock remote HTTP (including the Gemini API) in tests; never depend on the network.
 - Use the in-memory D1 stand-in (`test/fake-db.ts`) instead of a real database.
 - Test behavior and observable output, not implementation details.
 
@@ -72,9 +72,10 @@ Write clean, readable JavaScript as an experienced developer would:
 - The schema lives in `migrations/`; add a new numbered migration for every change.
 - Never edit a migration that has already been applied.
 - `items.url` is unique and writes use `INSERT OR IGNORE`; keep deduplication enforced by
-  the database rather than application-side checks.
-- Keep SQL in `src/store.ts`; parsing belongs in `src/feeds.ts` and orchestration in
-  `src/ingest.ts`.
+  the database rather than application-side checks. Ingestion also skips articles whose
+  URL is already stored, and the search prompt tells Gemini not to return duplicates.
+- Keep SQL in `src/store.ts`; AI search parsing belongs in `src/search.ts` and
+  orchestration in `src/ingest.ts`.
 
 ## Infrastructure
 
@@ -91,14 +92,11 @@ All local infrastructure runs in Docker on Alpine:
 - Keep `docker-compose.yml` compatible with `docker-compose` v1 (Compose file 3.8).
 - Use the standalone `docker-compose` CLI for every command, run from the repository
   root. The equivalent `make` targets are fine too.
-- The `app` service serves the worker on port `8787`, mounts the `feeds` volume
-  read-only, applies local D1 migrations, and enables `--test-scheduled`.
-- Local development uses `wrangler.dev.toml`, whose `[assets]` section exposes the
-  downloaded XML to the worker through `env.ASSETS`, and whose D1 binding points at the
-  local database.
-- The `download-feeds` service refreshes the `feeds` volume.
-- Deployment applies remote D1 migrations before `wrangler deploy`; it has no assets
-  binding, so production fetches the remote feeds.
+- The `app` service serves the worker on port `8787`, applies local D1 migrations, and
+  enables `--test-scheduled`.
+- Local development uses `wrangler.dev.toml`, which passes the Gemini model variable and
+  points the D1 binding at the local database. The API key belongs in `.dev.vars`.
+- Deployment applies remote D1 migrations before `wrangler deploy`.
 - The production cron trigger (`0 */12 * * *`) runs the ingestion handler every 12
   hours. Local testing uses `/__scheduled`.
 - The `test` and `deploy` services run under their own profiles.
@@ -118,14 +116,12 @@ All local infrastructure runs in Docker on Alpine:
 - Commit `.env.example` with empty values; never commit real credentials.
 - Never hardcode secrets in `docker-compose.yml`, source files, or scripts.
 - `docker-compose` loads `.env` automatically from the repository root.
-- `SCORE_API_KEY` is optional and must stay blank for keyless local endpoints; local
-  worker secrets belong in the ignored `.dev.vars` file.
+- `GEMINI_API_KEY` is required for ingestion; local worker secrets belong in the ignored
+  `.dev.vars` file.
 - Production secrets are set with `wrangler secret put` and read from `env`.
 
 ## Local development
 
-- `docker-compose run --rm download-feeds` — download the RSS feeds into the local
-  `feeds` volume. Run this before starting the app and again to refresh the cache.
 - `docker-compose up -d --build app` — build and start the worker in the background on
   port `8787`; local D1 migrations are applied automatically.
 - `docker-compose logs -f app` — follow the worker logs.
@@ -138,5 +134,10 @@ All local infrastructure runs in Docker on Alpine:
   `CLOUDFLARE_API_TOKEN`.
 
 Common tasks are also available as Makefile targets that forward to the Compose commands
-above: `make up`, `make down`, `make logs`, `make build`, `make feeds`, `make test`,
+above: `make up`, `make down`, `make logs`, `make build`, `make test`,
 `make typecheck`, `make qa`, `make scheduled`, and `make deploy`.
+
+## News count
+
+The number of articles requested per ingestion is configurable through the
+`NEWS_ITEM_COUNT` environment variable (default `20`, validated as a positive integer).

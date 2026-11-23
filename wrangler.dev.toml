@@ -2,18 +2,9 @@ name = "hinews-cf"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
-# Local development scores headlines through a local Ollama model.
-# Production uses the same defaults from src/score.ts unless SCORE_* is configured.
-[vars]
-SCORE_BASE_URL = "http://host.docker.internal:11435"
-SCORE_MODEL = "llama3.2:1b"
-
-# Local development reads downloaded feeds through this static assets binding.
-# Production uses wrangler.toml, which has no assets binding, so it fetches remotely.
-[assets]
-directory = "./feeds"
-binding = "ASSETS"
-
+# Local development secrets (GEMINI_API_KEY) and variables (GEMINI_MODEL,
+# GEMINI_BASE_URL, NEWS_ITEM_COUNT) come from the ignored .dev.vars file and the
+# repository-root .env file respectively.
 [[d1_databases]]
 binding = "DB"
 database_name = "hinews-cf"

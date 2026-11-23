@@ -79,9 +79,6 @@ class FakeStatement implements DbStatement {
     }
 
     let rows = [...this.database.rows.values()];
-    if (sql.includes('where score is null')) {
-      rows = rows.filter((row) => row.score == null);
-    }
     const results = rows.sort(
       (left, right) =>
         String(left.feed_id ?? '').localeCompare(String(right.feed_id ?? '')) ||
@@ -137,28 +134,7 @@ class FakeStatement implements DbStatement {
         this.database.writes += 1;
         return { meta: { changes } };
       }
-      if (sql.includes('score <=')) {
-        const threshold = Number(this.args[0]);
-        let changes = 0;
-        for (const [url, row] of [...this.database.rows.entries()]) {
-          if (row.score != null && row.score <= threshold) {
-            this.database.rows.delete(url);
-            changes += 1;
-          }
-        }
-        this.database.writes += 1;
-        return { meta: { changes } };
-      }
       throw new Error(`Unexpected SQL: ${this.sql}`);
-    }
-
-    if (sql.includes('update') && sql.includes('scheduled_at = ?')) {
-      const [scheduledAt, url] = this.args;
-      const row = this.database.rows.get(String(url));
-      if (!row) return { meta: { changes: 0 } };
-      row.scheduled_at = String(scheduledAt);
-      this.database.writes += 1;
-      return { meta: { changes: 1 } };
     }
 
     if (sql.includes('update') && sql.includes("status = 'published'")) {
@@ -168,28 +144,6 @@ class FakeStatement implements DbStatement {
         return { meta: { changes: 0 } };
       }
       row.status = 'published';
-      this.database.writes += 1;
-      return { meta: { changes: 1 } };
-    }
-
-    if (sql.includes('update') && sql.includes("status = 'scheduled'")) {
-      let changes = 0;
-      for (const row of this.database.rows.values()) {
-        if (row.status == null || row.status === 'new') {
-          row.status = 'scheduled';
-          changes += 1;
-        }
-      }
-      this.database.writes += 1;
-      return { meta: { changes } };
-    }
-
-    if (sql.includes('update') && sql.includes('score = ?')) {
-      const [score, url] = this.args;
-      const row = this.database.rows.get(String(url));
-      if (!row) return { meta: { changes: 0 } };
-      row.score =
-        score == null || Number.isNaN(Number(score)) ? null : Number(score);
       this.database.writes += 1;
       return { meta: { changes: 1 } };
     }

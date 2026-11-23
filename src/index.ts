@@ -1,12 +1,6 @@
 import { getFeeds } from './feeds.js';
-import {
-  listItems,
-  getLastSync,
-  backfillScores,
-  deletePublished,
-} from './store.js';
-import { ingestFeeds } from './ingest.js';
-import { getScoreOptions } from './score.js';
+import { listItems, getLastSync, deletePublished } from './store.js';
+import { ingestNews } from './ingest.js';
 import { renderPage } from './render.js';
 import { publishScheduled } from './publish.js';
 import type { Env, StoredItem } from './types.js';
@@ -33,9 +27,7 @@ async function handleRequest(env: Env): Promise<Response> {
 }
 
 async function runScheduledIngestion(env: Env) {
-  const result = await ingestFeeds(env);
-  await backfillScores(env.DB, getScoreOptions(env));
-  return result;
+  return ingestNews(env);
 }
 
 function handleScheduled(
