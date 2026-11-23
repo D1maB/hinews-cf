@@ -104,7 +104,7 @@ test('searchNews sends the configured prompt to Gemini and parses results', asyn
     /\/v1beta\/models\/gemini-2\.5-flash:generateContent$/,
   );
   assert.equal(apiKey, 'secret-key');
-  assert.deepEqual(Object.keys(requestBody), ['contents']);
+  assert.ok(Array.isArray(requestBody.contents));
 
   const prompt = JSON.stringify(requestBody.contents);
   assert.ok(prompt.includes('exactly 5 articles'));

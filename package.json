@@ -24,5 +24,9 @@
     "tsx": "^4.19.0",
     "typescript": "^6.0.3",
     "wrangler": "^3.114.17"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^4.0.124",
+    "ai": "^7.0.180"
   }
 }

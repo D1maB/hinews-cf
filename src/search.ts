@@ -1,3 +1,5 @@
+import { generateText } from 'ai';
+import { createGoogle } from '@ai-sdk/google';
 import { truncateToSentence } from './feeds.js';
 import type { FeedConfig, SearchItem } from './types.js';
 
@@ -7,6 +9,8 @@ export const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash';
 export const DEFAULT_NEWS_ITEM_COUNT = 20;
 export const MIN_SCORE = 1;
 export const MAX_SCORE = 100;
+
+const GEMINI_API_VERSION = 'v1beta';
 
 export interface SearchConfig {
   baseUrl: string;
@@ -91,7 +95,7 @@ export function buildPrompt(sources: FeedConfig[], itemCount: number): string {
 }
 
 /**
- * Search the web with Gemini and return the latest scored news items.
+ * Search the web with Gemini via the Vercel AI SDK and return the latest scored news items.
  *
  * Returns an empty list when the API key is missing or the request fails.
  */
@@ -119,36 +123,24 @@ export async function requestSearch(
   prompt: string,
 ): Promise<string | null> {
   try {
-    const model = options.model.replace(/^models\//, '');
-    const response = await fetch(
-      `${options.baseUrl.replace(/\/+$/, '')}/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          ...(options.apiKey ? { 'x-goog-api-key': options.apiKey } : {}),
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-        }),
+    const google = createGoogle({
+      apiKey: options.apiKey,
+      baseURL: options.baseUrl
+        .replace(/\/+$/, '')
+        .endsWith(`/${GEMINI_API_VERSION}`)
+        ? options.baseUrl.replace(/\/+$/, '')
+        : `${options.baseUrl.replace(/\/+$/, '')}/${GEMINI_API_VERSION}`,
+    });
+    const modelId = options.model.replace(/^models\//, '');
+    const { text } = await generateText({
+      model: google(modelId),
+      prompt,
+      tools: {
+        google_search: google.tools.googleSearch({}),
       },
-    );
+    });
 
-    if (!response.ok) {
-      console.error(
-        `Gemini search failed with HTTP ${response.status}: ${await response.text()}`,
-      );
-      return null;
-    }
-
-    const data = (await response.json()) as GeminiResponse;
-    const text =
-      data.candidates
-        ?.flatMap((candidate) => candidate.content?.parts ?? [])
-        .map((part) => part.text ?? '')
-        .join('') ?? '';
-
-    return text;
+    return text ?? '';
   } catch (error) {
     console.error(
       'Gemini search failed:',
@@ -156,12 +148,6 @@ export async function requestSearch(
     );
     return null;
   }
-}
-
-interface GeminiResponse {
-  candidates?: Array<{
-    content?: { parts?: Array<{ text?: string }> };
-  }>;
 }
 
 /** Extract and validate the AI's JSON payload into scored search items. */
