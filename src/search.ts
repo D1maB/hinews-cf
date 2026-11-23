@@ -83,6 +83,7 @@ export function buildPrompt(sources: FeedConfig[], itemCount: number): string {
     '',
     `The score is an integer from ${MIN_SCORE} to ${MAX_SCORE} that rates how interesting the article is to a PC hardware and gaming audience.`,
     'Only include articles hosted on the listed sites.',
+    'Exclude deals, promotions, and bargain content; only genuine news stories.',
     'Do not include duplicate articles: every title and URL in the array must be unique.',
     'Order the array from newest to oldest.',
     'Respond with only the JSON array, without markdown fences or commentary.',
