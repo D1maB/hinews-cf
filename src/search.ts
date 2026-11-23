@@ -65,7 +65,7 @@ function buildSourceList(sources: FeedConfig[]): string {
     .join('\n');
 }
 
-function buildPrompt(sources: FeedConfig[], itemCount: number): string {
+export function buildPrompt(sources: FeedConfig[], itemCount: number): string {
   return [
     'You are a news editor for a PC hardware and gaming audience.',
     `Today is ${new Date().toISOString().slice(0, 10)}.`,
