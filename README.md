@@ -43,16 +43,17 @@ cp .env.example .env
 `.env` is ignored by Git and Docker. `docker-compose` loads it automatically when run
 from the repository root. Commit only `.env.example`.
 
-Local worker variables live in `wrangler.dev.toml`; use `.dev.vars` for local secrets.
+Local worker configuration comes from the repository-root `.env` file; nothing needs
+`.dev.vars`.
 
 ## Run the app locally
 
 The app runs entirely in Docker, so you do not need Node.js installed on the host.
 
-1. Add your Gemini API key to the ignored local secrets file:
+1. Set your Gemini API key in the `.env` file:
 
    ```bash
-   echo 'GEMINI_API_KEY=your-key' >> .dev.vars
+   GEMINI_API_KEY=your-key
    ```
 
 2. Build the image and start the worker in the background:

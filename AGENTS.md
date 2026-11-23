@@ -94,8 +94,9 @@ All local infrastructure runs in Docker on Alpine:
   root. The equivalent `make` targets are fine too.
 - The `app` service serves the worker on port `8787`, applies local D1 migrations, and
   enables `--test-scheduled`.
-- Local development uses `wrangler.dev.toml`, which passes the Gemini model variable and
-  points the D1 binding at the local database. The API key belongs in `.dev.vars`.
+- Local development uses `wrangler.dev.toml`, which points the D1 binding at the
+  local database. All Gemini configuration comes from the repository-root `.env`
+  file (do not use `.dev.vars`).
 - Deployment applies remote D1 migrations before `wrangler deploy`.
 - The production cron trigger (`0 */12 * * *`) runs the ingestion handler every 12
   hours. Local testing uses `/__scheduled`.
@@ -116,8 +117,8 @@ All local infrastructure runs in Docker on Alpine:
 - Commit `.env.example` with empty values; never commit real credentials.
 - Never hardcode secrets in `docker-compose.yml`, source files, or scripts.
 - `docker-compose` loads `.env` automatically from the repository root.
-- `GEMINI_API_KEY` is required for ingestion; local worker secrets belong in the ignored
-  `.dev.vars` file.
+- `GEMINI_API_KEY` is required for ingestion; local worker configuration comes solely from
+  the repository-root `.env` file (do not use `.dev.vars`).
 - Production secrets are set with `wrangler secret put` and read from `env`.
 
 ## Local development

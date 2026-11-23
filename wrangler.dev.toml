@@ -3,8 +3,8 @@ main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
 # Local development secrets (GEMINI_API_KEY) and variables (GEMINI_MODEL,
-# GEMINI_BASE_URL, NEWS_ITEM_COUNT) come from the ignored .dev.vars file and the
-# repository-root .env file respectively.
+# GEMINI_BASE_URL, NEWS_ITEM_COUNT) come solely from the repository-root .env file,
+# which docker-compose passes into the container environment.
 [[d1_databases]]
 binding = "DB"
 database_name = "hinews-cf"
