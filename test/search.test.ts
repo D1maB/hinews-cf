@@ -165,6 +165,9 @@ test('searchNews sends the configured prompt to Gemini and parses results', asyn
   const prompt = JSON.stringify(requestBody.contents);
   assert.ok(prompt.includes('exactly 5 articles'));
   assert.ok(prompt.includes("Tom's Hardware"));
+  assert.ok(
+    prompt.includes('interesting news for the PC hardware and gaming audience'),
+  );
 
   assert.deepEqual(items, [
     {
@@ -211,6 +214,7 @@ test('searchNews sends the configured prompt to OpenRouter and parses results', 
   const prompt = JSON.stringify(requestBody.messages);
   assert.ok(prompt.includes('exactly 3 articles'));
   assert.ok(prompt.includes("Tom's Hardware"));
+  assert.ok(prompt.includes('published within the last 12 hours'));
 
   assert.equal(items.length, 1);
   assert.equal(items[0]?.url, 'https://www.tomshardware.com/reviews/rtx-5090');

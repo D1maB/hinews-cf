@@ -111,7 +111,7 @@ export function buildPrompt(sources: FeedConfig[], itemCount: number): string {
   return [
     'You are a news editor for a PC hardware and gaming audience.',
     `Today is ${new Date().toISOString().slice(0, 10)}.`,
-    'Use Google Search to find the latest news articles published by these sites:',
+    'Search the web for interesting news for the PC hardware and gaming audience published within the last 12 hours:',
     buildSourceList(sources),
     '',
     `Return exactly ${itemCount} articles as a JSON array. Each element must have:`,
@@ -124,7 +124,7 @@ export function buildPrompt(sources: FeedConfig[], itemCount: number): string {
     '}',
     '',
     `The score is an integer from ${MIN_SCORE} to ${MAX_SCORE} that rates how interesting the article is to a PC hardware and gaming audience.`,
-    'Only include articles hosted on the listed sites.',
+    'Only include articles hosted on the listed sites and published within the last 12 hours.',
     'Exclude deals, promotions, and bargain content; only genuine news stories.',
     'Do not include duplicate articles: every title and URL in the array must be unique.',
     'Order the array from newest to oldest.',
