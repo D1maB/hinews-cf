@@ -6,6 +6,7 @@ export const DEFAULT_SEARCH_PROVIDER: SearchProviderName = 'gemini';
 export const DEFAULT_NEWS_ITEM_COUNT = 20;
 export const MIN_SCORE = 1;
 export const MAX_SCORE = 100;
+const URL_CHECK_TIMEOUT_MS = 5_000;
 
 const SEARCH_PROVIDERS = ['gemini', 'openrouter'] as const;
 
@@ -117,6 +118,7 @@ export function buildPrompt(sources: FeedConfig[], itemCount: number): string {
     '',
     `The score is an integer from ${MIN_SCORE} to ${MAX_SCORE} that rates how interesting the article is to a PC hardware and gaming audience. Assign each article its own score within that range; do not reuse the same score across articles.`,
     'Only include articles hosted on the listed sites and published within the last 12 hours.',
+    'Only return direct article URLs that are live and accessible (not 404, removed pages, homepages, or section listings).',
     'Exclude deals, promotions, and bargain content; only genuine news stories.',
     'Do not include duplicate articles: every title and URL in the array must be unique.',
     'Order the array from newest to oldest.',
@@ -147,10 +149,31 @@ export async function searchNews(
     const text = await request(buildPrompt(sources, options.itemCount));
     if (text === null) return [];
 
-    return parseSearchItems(text, sources, options.itemCount);
+    const items = parseSearchItems(text, sources, options.itemCount);
+    return await filterLiveSearchItems(items);
   } catch (error) {
     console.error('News search failed:', errorMessage(error));
     return [];
+  }
+}
+
+/** Check if a URL is accessible by making a HEAD request. */
+export async function isUrlValid(
+  urlString: string,
+  timeoutMs = 8000,
+): Promise<boolean> {
+  try {
+    const abort = new AbortController();
+    const timeoutId = setTimeout(() => abort.abort(), timeoutMs);
+    const response = await fetch(urlString, {
+      method: 'HEAD',
+      signal: abort.signal,
+      headers: { 'User-Agent': 'hinews-cf/1.0' },
+    });
+    clearTimeout(timeoutId);
+    return response.ok;
+  } catch {
+    return false;
   }
 }
 
@@ -165,6 +188,53 @@ export async function requestSearch(
     console.error('News search failed:', errorMessage(error));
     return null;
   }
+}
+
+async function isLiveUrl(url: string): Promise<boolean> {
+  async function check(method: 'HEAD' | 'GET'): Promise<Response> {
+    return fetch(url, {
+      method,
+      redirect: 'follow',
+      signal: AbortSignal.timeout(URL_CHECK_TIMEOUT_MS),
+    });
+  }
+
+  try {
+    let response = await check('HEAD');
+    if (response.status === 405 || response.status === 501) {
+      response = await check('GET');
+    }
+
+    if (response.status === 404 || response.status === 410) {
+      console.warn(`Skipping dead link (${response.status}): ${url}`);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.warn(
+      `Keeping link because liveness check failed: ${url}`,
+      errorMessage(error),
+    );
+    return true;
+  }
+}
+
+/** Drop items whose URLs are definitively dead (404/410). */
+export async function filterLiveSearchItems(
+  items: SearchItem[],
+): Promise<SearchItem[]> {
+  const checks = await Promise.allSettled(
+    items.map(async (item) => ({ item, live: await isLiveUrl(item.url) })),
+  );
+
+  return checks.flatMap((result) => {
+    if (result.status === 'fulfilled') {
+      return result.value.live ? [result.value.item] : [];
+    }
+    console.warn('Keeping link because liveness check rejected:', result.reason);
+    return [];
+  });
 }
 
 /** Extract and validate the AI's JSON payload into scored search items. */

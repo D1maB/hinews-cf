@@ -1,5 +1,5 @@
 import { getFeeds } from './feeds.js';
-import { searchNews } from './search.js';
+import { searchNews, isUrlValid } from './search.js';
 import {
   saveItems,
   setLastSync,
@@ -84,13 +84,21 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
     return !SPONSORED_REGEX.test(textToCheck);
   });
 
+  // Filter out items with inaccessible URLs (e.g. 404 pages).
+  const urlValidity = await Promise.all(
+    candidates.map((item) => isUrlValid(item.url)),
+  );
+  const validCandidates = candidates.filter(
+    (_, index) => urlValidity[index],
+  );
+
   const lastScheduledAt = await getLastScheduledAt(env.DB);
   const baseTime = lastScheduledAt
     ? new Date(lastScheduledAt).getTime()
     : Date.now();
-  const prepared = candidates.map((item) => ({
+  const prepared = validCandidates.map((item) => ({
     ...item,
-    scheduledAt: buildScheduledAt(baseTime, candidates.length),
+    scheduledAt: buildScheduledAt(baseTime, validCandidates.length),
   }));
 
   const inserted = await saveItems(env.DB, prepared);
