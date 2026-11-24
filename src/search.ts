@@ -82,6 +82,7 @@ export function getSearchOptions(env: SearchEnv = {}): SearchConfig {
   };
   console.log(`Using model ${config.model}`);
   console.log(`Using provider ${config.provider}`);
+  console.log(`itemCount ${itemCount}`);
   return config;
 }
 
@@ -112,10 +113,10 @@ export function buildPrompt(sources: FeedConfig[], itemCount: number): string {
     '  "description": "one or two sentence summary",',
     '  "source": "site name exactly as listed above",',
     '  "url": "direct link to the article",',
-    '  "score": 42',
+    '  "score": 75',
     '}',
     '',
-    `The score is an integer from ${MIN_SCORE} to ${MAX_SCORE} that rates how interesting the article is to a PC hardware and gaming audience.`,
+    `The score is an integer from ${MIN_SCORE} to ${MAX_SCORE} that rates how interesting the article is to a PC hardware and gaming audience. Assign each article its own score within that range; do not reuse the same score across articles.`,
     'Only include articles hosted on the listed sites and published within the last 12 hours.',
     'Exclude deals, promotions, and bargain content; only genuine news stories.',
     'Do not include duplicate articles: every title and URL in the array must be unique.',
