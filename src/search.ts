@@ -110,7 +110,7 @@ export function buildPrompt(sources: FeedConfig[], itemCount: number): string {
     `Return exactly ${itemCount} articles as a JSON array. Each element must have:`,
     '{',
     '  "title": "article title",',
-    '  "description": "one or two sentence summary",',
+    '  "description": "two or three sentence summary",',
     '  "source": "site name exactly as listed above",',
     '  "url": "direct link to the article",',
     '  "score": 75',

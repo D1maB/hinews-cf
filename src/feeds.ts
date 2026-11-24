@@ -1,7 +1,7 @@
 import sites from '../sites.json';
 import type { Env, FeedConfig } from './types.js';
 
-export const MAX_DESCRIPTION_LENGTH = 300;
+export const MAX_DESCRIPTION_LENGTH = 500;
 
 const sitesFromJson: unknown = sites;
 
