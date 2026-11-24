@@ -17,8 +17,8 @@ const ARTICLES: Article[] = [
   {
     title: 'RTX 5090 review',
     description: 'A deep dive into the new flagship GPU.',
-    source: "Tom's Hardware",
-    url: 'https://www.tomshardware.com/reviews/rtx-5090',
+    source: 'Wccftech',
+    url: 'https://wccftech.com/reviews/rtx-5090',
     score: 90,
   },
   {
@@ -64,9 +64,9 @@ test('stores scored AI search results with their sources', async (t) => {
   assert.equal(inserted, 2);
   assert.equal(db.rows.size, 2);
 
-  const row = db.rows.get('https://www.tomshardware.com/reviews/rtx-5090');
-  assert.equal(row?.feed_id, 'tomshardware');
-  assert.equal(row?.feed_name, "Tom's Hardware");
+  const row = db.rows.get('https://wccftech.com/reviews/rtx-5090');
+  assert.equal(row?.feed_id, 'wccftech');
+  assert.equal(row?.feed_name, 'Wccftech');
   assert.equal(row?.score, 90);
   assert.equal(row?.description, 'A deep dive into the new flagship GPU.');
   assert.equal(row?.status, 'scheduled');

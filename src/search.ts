@@ -82,10 +82,6 @@ export function getSearchOptions(env: SearchEnv = {}): SearchConfig {
   console.log(`Using provider ${config.provider}`);
   console.log(`itemCount ${itemCount}`);
 
-  if (provider === 'openrouter') {
-    console.log(`Using OpenRouter model ${config.model}`);
-  }
-
   return config;
 }
 

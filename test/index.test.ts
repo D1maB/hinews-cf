@@ -11,8 +11,8 @@ const ARTICLES = [
   {
     title: 'RTX 5090 review',
     description: 'A deep dive into the new flagship GPU.',
-    source: "Tom's Hardware",
-    url: 'https://www.tomshardware.com/reviews/rtx-5090',
+    source: 'Wccftech',
+    url: 'https://wccftech.com/reviews/rtx-5090',
     score: 90,
   },
   {
@@ -68,7 +68,7 @@ test('renders every stored item from the database', async () => {
 
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type') ?? '', /^text\/html/);
-  assert.match(html, /7 stored headlines from 8 sources via AI web search/);
+  assert.match(html, /7 stored headlines from 3 sources via AI web search/);
 
   for (const row of rows) {
     assert.ok(html.includes(row.title), `missing ${row.title}`);

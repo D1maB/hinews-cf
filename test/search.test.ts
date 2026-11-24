@@ -13,8 +13,8 @@ function article(overrides: Record<string, unknown> = {}) {
   return {
     title: 'RTX 5090 review',
     description: 'A deep dive into the new flagship GPU.',
-    source: "Tom's Hardware",
-    url: 'https://www.tomshardware.com/reviews/rtx-5090',
+    source: 'Wccftech',
+    url: 'https://wccftech.com/reviews/rtx-5090',
     score: 82,
     ...overrides,
   };
@@ -162,7 +162,7 @@ test('searchNews sends the configured prompt to Gemini and parses results', asyn
 
   const prompt = JSON.stringify(requestBody.contents);
   assert.ok(prompt.includes('exactly 5 articles'));
-  assert.ok(prompt.includes("Tom's Hardware"));
+  assert.ok(prompt.includes('Wccftech'));
   assert.ok(
     prompt.includes('interesting news for the PC hardware and gaming audience'),
   );
@@ -171,8 +171,8 @@ test('searchNews sends the configured prompt to Gemini and parses results', asyn
     {
       title: 'RTX 5090 review',
       description: 'A deep dive into the new flagship GPU.',
-      source: "Tom's Hardware",
-      url: 'https://www.tomshardware.com/reviews/rtx-5090',
+      source: 'Wccftech',
+      url: 'https://wccftech.com/reviews/rtx-5090',
       score: 82,
     },
   ]);
@@ -211,11 +211,11 @@ test('searchNews sends the configured prompt to OpenRouter and parses results', 
 
   const prompt = JSON.stringify(requestBody.messages);
   assert.ok(prompt.includes('exactly 3 articles'));
-  assert.ok(prompt.includes("Tom's Hardware"));
+  assert.ok(prompt.includes('Wccftech'));
   assert.ok(prompt.includes('published within the last 12 hours'));
 
   assert.equal(items.length, 1);
-  assert.equal(items[0]?.url, 'https://www.tomshardware.com/reviews/rtx-5090');
+  assert.equal(items[0]?.url, 'https://wccftech.com/reviews/rtx-5090');
 });
 
 test('searchNews returns an empty list without an API key', async (t) => {
@@ -287,7 +287,7 @@ test('parseSearchItems clamps scores and drops invalid rows', () => {
       }),
       article({
         title: 'Repeated story',
-        url: 'https://www.tomshardware.com/reviews/rtx-5090',
+        url: 'https://wccftech.com/reviews/rtx-5090',
       }),
       article({
         title: 'Unknown site',
