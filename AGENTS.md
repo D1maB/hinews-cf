@@ -138,7 +138,7 @@ All local infrastructure runs in Docker on Alpine:
 
 Common tasks are also available as Makefile targets that forward to the Compose commands
 above: `make up`, `make down`, `make logs`, `make build`, `make test`,
-`make typecheck`, `make qa`, `make scheduled`, and `make deploy`.
+`make typecheck`, `make qa`, `make re`, and `make deploy`.
 
 ## News count
 

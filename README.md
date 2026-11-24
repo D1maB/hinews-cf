@@ -83,7 +83,7 @@ The app runs entirely in Docker, so you do not need Node.js installed on the hos
 3. Populate the database with the scheduled ingestion handler:
 
    ```bash
-   make scheduled
+   make cron
    ```
 
    This calls the configured provider's web search once and stores up to the configured
