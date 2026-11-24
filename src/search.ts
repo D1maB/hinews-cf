@@ -84,7 +84,8 @@ export function getSearchOptions(env: SearchEnv = {}): SearchConfig {
     model: requireValue(env.GEMINI_MODEL, 'GEMINI_MODEL'),
     itemCount,
   };
-  console.log(`Using Gemini model ${config.model}`);
+  console.log(`Using model ${config.model}`);
+  console.log(`Using provider ${config.provider}`);
   return config;
 }
 
@@ -148,8 +149,8 @@ export async function searchNews(
     return [];
   }
 
-  const provider = createSearchProvider(options);
-  const text = await provider.request(buildPrompt(sources, options.itemCount));
+  const request = createSearchProvider(options);
+  const text = await request(buildPrompt(sources, options.itemCount));
   if (text === null) return [];
 
   return parseSearchItems(text, sources, options.itemCount);
@@ -160,7 +161,7 @@ export async function requestSearch(
   options: SearchConfig,
   prompt: string,
 ): Promise<string | null> {
-  return createSearchProvider(options).request(prompt);
+  return createSearchProvider(options)(prompt);
 }
 
 /** Extract and validate the AI's JSON payload into scored search items. */

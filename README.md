@@ -137,8 +137,8 @@ re-insert the same link.
 
 The provider is selected with `SEARCH_PROVIDER` (`gemini` or `openrouter`). The concrete
 provider implementation is chosen by a factory in `src/search-provider.ts`, so adding
-another provider only requires implementing the `SearchProvider` strategy and registering
-it in the factory.
+another provider only requires writing a request function and registering it in
+`PROVIDER_REQUESTS`.
 
 ## Database
 
@@ -233,7 +233,7 @@ handler manually from the Cloudflare dashboard.
 ├── sites.json                   # Default news sources for the AI web search
 ├── src/feeds.ts                # Source list, text helpers
 ├── src/search.ts               # Search orchestration and result validation
-├── src/search-provider.ts      # Search provider strategies and factory
+├── src/search-provider.ts      # Search provider request functions and factory
 ├── src/ingest.ts               # Deduplicates and stores scored items
 ├── src/store.ts                # D1 reads and batched writes
 ├── src/publish.ts              # Telegram and Bluesky publishing
