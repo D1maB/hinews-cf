@@ -10,8 +10,13 @@
     "url": "https://www.techpowerup.com/rss/news"
   },
   {
-    "id": "videocatdz",
-    "name": "Videocatdz",
-    "url": "https://www.videocatdz.com/feed/"
+    "id": "techspot",
+    "name": "TechSpot",
+    "url": "https://www.techspot.com/rss/"
+  },
+  {
+    "id": "videocardz",
+    "name": "videocardz",
+    "url": "https://www.videocardz.com/feed/"
   }
 ]

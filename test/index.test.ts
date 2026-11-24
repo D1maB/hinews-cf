@@ -68,7 +68,7 @@ test('renders every stored item from the database', async () => {
 
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type') ?? '', /^text\/html/);
-  assert.match(html, /7 stored headlines from 3 sources via AI web search/);
+  assert.match(html, /7 stored headlines from 4 sources via AI web search/);
 
   for (const row of rows) {
     assert.ok(html.includes(row.title), `missing ${row.title}`);
