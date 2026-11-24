@@ -88,9 +88,9 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
   const baseTime = lastScheduledAt
     ? new Date(lastScheduledAt).getTime()
     : Date.now();
-  const prepared = candidates.map((item, index) => ({
+  const prepared = candidates.map((item) => ({
     ...item,
-    scheduledAt: buildScheduledAt(baseTime, index, candidates.length),
+    scheduledAt: buildScheduledAt(baseTime, candidates.length),
   }));
 
   const inserted = await saveItems(env.DB, prepared);

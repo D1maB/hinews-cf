@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { deletePublished, saveItems } from '../src/store.ts';
+import { buildScheduledAt, deletePublished, saveItems } from '../src/store.ts';
 import { createFakeDb } from './fake-db.ts';
 import type { NewItem } from '../src/types.ts';
 
@@ -73,6 +73,17 @@ test('saveItems skips URLs that already exist in the database', async () => {
   assert.equal(db.rows.size, 2);
   assert.equal(db.rows.get('https://example.com/kitguru')?.title, 'Old story');
   assert.ok(db.rows.has('https://example.com/fresh'));
+});
+
+test('buildScheduledAt schedules items randomly within the 12 hour window', () => {
+  const base = new Date('2026-11-24T17:00:00.000Z').getTime();
+
+  const first = new Date(buildScheduledAt(base, 1)).getTime();
+  const second = new Date(buildScheduledAt(base, 2)).getTime();
+
+  assert.ok(first >= base);
+  assert.ok(second >= base);
+  assert.ok(second - base < 12 * 60 * 60 * 1000);
 });
 
 test('deletes only published items', async (t) => {

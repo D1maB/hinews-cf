@@ -131,25 +131,10 @@ export async function markTargetPublished(
   return result.meta.changes ?? 0;
 }
 
-/** Random offset, in minutes, added to an even schedule slot. */
-function slotJitter(slotMinutes: number): number {
-  return Math.random() * slotMinutes;
-}
-
-/** Spread `itemCount` items across the next 12-hour window with random jitter. */
-export function buildScheduledAt(
-  baseTime: number,
-  index: number,
-  itemCount: number,
-): string {
-  const slotMinutes = itemCount > 0 ? SCHEDULE_WINDOW_MINUTES / itemCount : 0;
+/** Spread `itemCount` items randomly across the next 12-hour window. */
+export function buildScheduledAt(baseTime: number, itemCount: number): string {
   const offsetMinutes =
-    itemCount > 0
-      ? Math.min(
-          (index + 1) * slotMinutes + slotJitter(slotMinutes),
-          SCHEDULE_WINDOW_MINUTES,
-        )
-      : 0;
+    itemCount > 0 ? Math.random() * SCHEDULE_WINDOW_MINUTES : 0;
   const scheduledTime = new Date(baseTime + offsetMinutes * 60 * 1000);
   return scheduledTime.toISOString();
 }
