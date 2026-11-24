@@ -40,10 +40,8 @@ cp .env.example .env
 | `SEARCH_PROVIDER`       | Search provider: `gemini` (default) or `openrouter`       |
 | `GEMINI_API_KEY`        | Gemini API key used when the provider is `gemini`         |
 | `GEMINI_MODEL`          | Gemini model, e.g. `gemini-3.6-flash`                     |
-| `GEMINI_BASE_URL`       | Optional Gemini API base URL override                     |
 | `OPENROUTER_API_KEY`    | OpenRouter API key used when the provider is `openrouter` |
 | `OPENROUTER_MODEL`      | OpenRouter model, e.g. `perplexity/sonar`                 |
-| `OPENROUTER_BASE_URL`   | Optional OpenRouter API base URL override                 |
 | `NEWS_ITEM_COUNT`       | How many articles to request per ingestion (default `20`) |
 
 `.env` is ignored by Git and Docker. `docker-compose` loads it automatically when run

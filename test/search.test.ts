@@ -64,7 +64,6 @@ test('getSearchOptions requires the Gemini API key and model', () => {
     }),
     {
       provider: 'gemini',
-      baseUrl: 'https://generativelanguage.googleapis.com',
       model: 'gemini-3.6-flash',
       itemCount: DEFAULT_NEWS_ITEM_COUNT,
       apiKey: 'secret-key',
@@ -81,7 +80,6 @@ test('getSearchOptions supports OpenRouter', () => {
     }),
     {
       provider: 'openrouter',
-      baseUrl: 'https://openrouter.ai/api/v1',
       model: 'perplexity/sonar',
       itemCount: DEFAULT_NEWS_ITEM_COUNT,
       apiKey: 'or-key',

@@ -2,9 +2,6 @@ import { truncateToSentence } from './feeds.js';
 import { createSearchProvider } from './search-provider.js';
 import type { FeedConfig, SearchItem } from './types.js';
 
-export const DEFAULT_GEMINI_BASE_URL =
-  'https://generativelanguage.googleapis.com';
-export const DEFAULT_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 export const DEFAULT_SEARCH_PROVIDER: SearchProviderName = 'gemini';
 export const DEFAULT_NEWS_ITEM_COUNT = 20;
 export const MIN_SCORE = 1;
@@ -16,7 +13,6 @@ export type SearchProviderName = (typeof SEARCH_PROVIDERS)[number];
 
 export interface SearchConfig {
   provider: SearchProviderName;
-  baseUrl: string;
   model: string;
   itemCount: number;
   apiKey: string;
@@ -26,10 +22,8 @@ export interface SearchEnv {
   SEARCH_PROVIDER?: string;
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
-  GEMINI_BASE_URL?: string;
   OPENROUTER_API_KEY?: string;
   OPENROUTER_MODEL?: string;
-  OPENROUTER_BASE_URL?: string;
   NEWS_ITEM_COUNT?: string;
 }
 
@@ -72,7 +66,6 @@ export function getSearchOptions(env: SearchEnv = {}): SearchConfig {
   if (provider === 'openrouter') {
     const config = {
       provider,
-      baseUrl: env.OPENROUTER_BASE_URL?.trim() || DEFAULT_OPENROUTER_BASE_URL,
       apiKey: requireValue(env.OPENROUTER_API_KEY, 'OPENROUTER_API_KEY'),
       model: requireValue(env.OPENROUTER_MODEL, 'OPENROUTER_MODEL'),
       itemCount,
@@ -83,7 +76,6 @@ export function getSearchOptions(env: SearchEnv = {}): SearchConfig {
 
   const config = {
     provider,
-    baseUrl: env.GEMINI_BASE_URL?.trim() || DEFAULT_GEMINI_BASE_URL,
     apiKey: requireValue(env.GEMINI_API_KEY, 'GEMINI_API_KEY'),
     model: requireValue(env.GEMINI_MODEL, 'GEMINI_MODEL'),
     itemCount,

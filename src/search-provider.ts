@@ -2,6 +2,12 @@ import type { SearchConfig, SearchProviderName } from './search.js';
 
 const GEMINI_API_VERSION = 'v1beta';
 
+/** Base URL of the Google Generative Language API used by Gemini. */
+export const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com';
+
+/** Base URL of the OpenRouter chat completions API. */
+export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+
 /** Send a prompt to a provider and return the raw model response, or `null` on failure. */
 export type SearchRequest = (prompt: string) => Promise<string | null>;
 
@@ -9,10 +15,6 @@ type ProviderRequest = (
   config: SearchConfig,
   prompt: string,
 ) => Promise<string | null>;
-
-function withoutTrailingSlash(value: string): string {
-  return value.replace(/\/+$/, '');
-}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -26,7 +28,7 @@ export async function requestGemini(
   try {
     const model = config.model.replace(/^models\//, '');
     const response = await fetch(
-      `${withoutTrailingSlash(config.baseUrl)}/${GEMINI_API_VERSION}/models/${encodeURIComponent(model)}:generateContent`,
+      `${GEMINI_BASE_URL}/${GEMINI_API_VERSION}/models/${encodeURIComponent(model)}:generateContent`,
       {
         method: 'POST',
         headers: {
@@ -69,21 +71,18 @@ export async function requestOpenRouter(
   prompt: string,
 ): Promise<string | null> {
   try {
-    const response = await fetch(
-      `${withoutTrailingSlash(config.baseUrl)}/chat/completions`,
-      {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: config.model,
-          messages: [{ role: 'user', content: prompt }],
-          plugins: [{ id: 'web' }],
-        }),
+    const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${config.apiKey}`,
       },
-    );
+      body: JSON.stringify({
+        model: config.model,
+        messages: [{ role: 'user', content: prompt }],
+        plugins: [{ id: 'web' }],
+      }),
+    });
 
     if (!response.ok) {
       console.error(
