@@ -63,23 +63,29 @@ export function getSearchOptions(env: SearchEnv = {}): SearchConfig {
   const provider = parseProvider(env.SEARCH_PROVIDER);
   const itemCount = parseItemCount(env.NEWS_ITEM_COUNT);
 
+  const config: SearchConfig =
+    provider === 'openrouter'
+      ? {
+          provider,
+          apiKey: requireValue(env.OPENROUTER_API_KEY, 'OPENROUTER_API_KEY'),
+          model: requireValue(env.OPENROUTER_MODEL, 'OPENROUTER_MODEL'),
+          itemCount,
+        }
+      : {
+          provider,
+          apiKey: requireValue(env.GEMINI_API_KEY, 'GEMINI_API_KEY'),
+          model: requireValue(env.GEMINI_MODEL, 'GEMINI_MODEL'),
+          itemCount,
+        };
+
+  console.log(`Using model ${config.model}`);
+  console.log(`Using provider ${config.provider}`);
+  console.log(`itemCount ${itemCount}`);
+
   if (provider === 'openrouter') {
-    const config = {
-      provider,
-      apiKey: requireValue(env.OPENROUTER_API_KEY, 'OPENROUTER_API_KEY'),
-      model: requireValue(env.OPENROUTER_MODEL, 'OPENROUTER_MODEL'),
-      itemCount,
-    };
     console.log(`Using OpenRouter model ${config.model}`);
-    return config;
   }
 
-  const config = {
-    provider,
-    apiKey: requireValue(env.GEMINI_API_KEY, 'GEMINI_API_KEY'),
-    model: requireValue(env.GEMINI_MODEL, 'GEMINI_MODEL'),
-    itemCount,
-  };
   return config;
 }
 
