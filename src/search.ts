@@ -80,9 +80,6 @@ export function getSearchOptions(env: SearchEnv = {}): SearchConfig {
     model: requireValue(env.GEMINI_MODEL, 'GEMINI_MODEL'),
     itemCount,
   };
-  console.log(`Using model ${config.model}`);
-  console.log(`Using provider ${config.provider}`);
-  console.log(`itemCount ${itemCount}`);
   return config;
 }
 
