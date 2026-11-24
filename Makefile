@@ -1,4 +1,4 @@
-.PHONY: up down logs build test typecheck deploy query migrate help qa wipe search cron push re
+.PHONY: up down logs build test typecheck deploy query migrate help qa wipe search cron re
 
 # The standalone v1 CLI is the supported local runtime. CI overrides this with
 # `DOCKER_COMPOSE="docker compose"` because GitHub runners ship only Compose v2.
@@ -46,9 +46,6 @@ cron:
 re:
 	$(DOCKER_COMPOSE) down && $(DOCKER_COMPOSE) up -d --build app
 
-push:
-	git push origin main
-
 deploy:
 	$(DOCKER_COMPOSE) run --rm deploy
 
@@ -74,7 +71,6 @@ help:
 	@echo "  make cron       - run cron ingestion handler locally"
 	@echo "  make re         - recreate app container for env resync"
 	@echo "  make deploy     - deploy to Cloudflare"
-	@echo "  make push       - push changes to GitHub main branch"
 	@echo "  make query      - run a SQL query against local D1 (e.g. make query DB_QUERY=\"SELECT COUNT(*) FROM items\")"
 	@echo "  make migrate    - apply D1 migrations to the local database"
 	@echo "  make wipe       - wipe all stored items from the local database"
