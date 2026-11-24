@@ -246,6 +246,34 @@ test('searchNews returns an empty list when the provider fails', async (t) => {
   assert.deepEqual(items, []);
 });
 
+test('searchNews logs and returns an empty list when the search fails', async (t) => {
+  const errors: string[] = [];
+  t.mock.method(console, 'error', (...args: unknown[]) => {
+    errors.push(args.map(String).join(' '));
+  });
+
+  const failingSource = {
+    id: 'tom-shardware',
+    name: "Tom's Hardware",
+    get url(): string {
+      throw new Error('source exploded');
+    },
+  };
+
+  const items = await searchNews(
+    {
+      GEMINI_API_KEY: 'secret-key',
+      GEMINI_MODEL: 'gemini-3.6-flash',
+    },
+    [failingSource],
+  );
+
+  assert.deepEqual(items, []);
+  assert.ok(
+    errors.some((line) => line.includes('News search failed: source exploded')),
+  );
+});
+
 test('parseSearchItems clamps scores and drops invalid rows', () => {
   const items = parseSearchItems(
     JSON.stringify([

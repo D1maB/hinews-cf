@@ -52,6 +52,10 @@ function parseProvider(value: string | undefined): SearchProviderName {
   return provider as SearchProviderName;
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function requireValue(value: string | undefined, name: string): string {
   const trimmed = value?.trim();
   if (!trimmed) {
@@ -142,18 +146,20 @@ export async function searchNews(
   try {
     options = getSearchOptions(env);
   } catch (error) {
-    console.error(
-      'News search is not configured:',
-      error instanceof Error ? error.message : error,
-    );
+    console.error('News search is not configured:', errorMessage(error));
     return [];
   }
 
-  const request = createSearchProvider(options);
-  const text = await request(buildPrompt(sources, options.itemCount));
-  if (text === null) return [];
+  try {
+    const request = createSearchProvider(options);
+    const text = await request(buildPrompt(sources, options.itemCount));
+    if (text === null) return [];
 
-  return parseSearchItems(text, sources, options.itemCount);
+    return parseSearchItems(text, sources, options.itemCount);
+  } catch (error) {
+    console.error('News search failed:', errorMessage(error));
+    return [];
+  }
 }
 
 /** Run a single search request through the configured provider. */
@@ -161,7 +167,12 @@ export async function requestSearch(
   options: SearchConfig,
   prompt: string,
 ): Promise<string | null> {
-  return createSearchProvider(options)(prompt);
+  try {
+    return await createSearchProvider(options)(prompt);
+  } catch (error) {
+    console.error('News search failed:', errorMessage(error));
+    return null;
+  }
 }
 
 /** Extract and validate the AI's JSON payload into scored search items. */
