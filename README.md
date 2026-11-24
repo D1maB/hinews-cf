@@ -145,7 +145,7 @@ column is unique and there is a case-insensitive unique index on `title`, so the
 story is never inserted twice even though the search runs repeatedly.
 
 Each ingestion appends new rows; existing rows are left in place. Newly stored items are
-spread evenly across the next 12-hour window. Published rows are deleted by the weekly
+spread randomly across the next 12-hour window. Published rows are deleted by the weekly
 cleanup cron.
 
 Cron triggers run publishing every minute, ingestion every 12 hours, and cleanup every
