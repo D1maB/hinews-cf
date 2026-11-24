@@ -105,15 +105,28 @@ The app runs entirely in Docker, so you do not need Node.js installed on the hos
    docker-compose down
    ```
 
-Common tasks are also available as Makefile targets that wrap the same Compose commands:
+Common tasks are available as Makefile targets, each forwarding to the corresponding
+Docker Compose command. Run `make help` to print this list from the terminal.
 
 ```bash
-make up         # build and start the worker
-make test       # run the test suite
-make typecheck  # typecheck with tsc
-make qa         # run format check, lint, typecheck, and tests
-make logs       # follow the worker logs
-make down       # stop and remove containers
+make up           # build and start the worker (http://localhost:8787)
+make down         # stop and remove containers
+make logs         # follow worker logs
+make build        # rebuild the app image
+make cron         # run the cron ingestion handler locally
+make re           # recreate the app container to resync environment variables
+make search       # run the configured provider's news search and print its JSON result
+make query        # run a SQL query against local D1 (e.g. make query DB_QUERY="SELECT COUNT(*) FROM items")
+make migrate      # apply D1 migrations to the local database
+make wipe         # delete all stored items from the local database
+make test         # run the test suite
+make typecheck    # typecheck the project with tsc
+make lint         # run ESLint
+make format       # format files with Prettier
+make format-check # check formatting with Prettier
+make qa           # run Prettier check, ESLint, typecheck, and tests
+make deploy       # apply remote migrations and deploy to Cloudflare
+make help         # show the list of available targets
 ```
 
 Source files are mounted into the container, so edits reload automatically. `.env` is not
