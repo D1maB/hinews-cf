@@ -29,7 +29,13 @@ function geminiResponse(content: string): Response {
   );
 }
 
-test('getSearchOptions rejects missing configuration', () => {
+function openRouterResponse(content: string): Response {
+  return new Response(JSON.stringify({ choices: [{ message: { content } }] }), {
+    status: 200,
+  });
+}
+
+test('getSearchOptions defaults to Gemini and rejects missing configuration', () => {
   assert.throws(() => getSearchOptions({}), /GEMINI_API_KEY/);
   assert.throws(
     () => getSearchOptions({ GEMINI_API_KEY: 'secret-key' }),
@@ -50,18 +56,56 @@ test('getSearchOptions rejects missing configuration', () => {
   );
 });
 
-test('getSearchOptions requires the API key and model', () => {
+test('getSearchOptions requires the Gemini API key and model', () => {
   assert.deepEqual(
     getSearchOptions({
       GEMINI_API_KEY: '  secret-key  ',
       GEMINI_MODEL: 'gemini-3.6-flash',
     }),
     {
+      provider: 'gemini',
       baseUrl: 'https://generativelanguage.googleapis.com',
       model: 'gemini-3.6-flash',
       itemCount: DEFAULT_NEWS_ITEM_COUNT,
       apiKey: 'secret-key',
     },
+  );
+});
+
+test('getSearchOptions supports OpenRouter', () => {
+  assert.deepEqual(
+    getSearchOptions({
+      SEARCH_PROVIDER: 'OpenRouter',
+      OPENROUTER_API_KEY: '  or-key  ',
+      OPENROUTER_MODEL: 'perplexity/sonar',
+    }),
+    {
+      provider: 'openrouter',
+      baseUrl: 'https://openrouter.ai/api/v1',
+      model: 'perplexity/sonar',
+      itemCount: DEFAULT_NEWS_ITEM_COUNT,
+      apiKey: 'or-key',
+    },
+  );
+
+  assert.throws(
+    () => getSearchOptions({ SEARCH_PROVIDER: 'openrouter' }),
+    /OPENROUTER_API_KEY/,
+  );
+  assert.throws(
+    () =>
+      getSearchOptions({
+        SEARCH_PROVIDER: 'openrouter',
+        OPENROUTER_API_KEY: 'or-key',
+      }),
+    /OPENROUTER_MODEL/,
+  );
+});
+
+test('getSearchOptions rejects an unknown provider', () => {
+  assert.throws(
+    () => getSearchOptions({ SEARCH_PROVIDER: 'google' }),
+    /SEARCH_PROVIDER/,
   );
 });
 
@@ -133,6 +177,45 @@ test('searchNews sends the configured prompt to Gemini and parses results', asyn
   ]);
 });
 
+test('searchNews sends the configured prompt to OpenRouter and parses results', async (t) => {
+  let requestUrl = '';
+  let requestBody: Record<string, unknown> = {};
+  let authorization: string | null = null;
+
+  t.mock.method(
+    globalThis,
+    'fetch',
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      requestUrl = String(input);
+      requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      authorization = new Headers(init?.headers).get('authorization');
+      return openRouterResponse(JSON.stringify([article()]));
+    },
+  );
+
+  const items = await searchNews(
+    {
+      SEARCH_PROVIDER: 'openrouter',
+      OPENROUTER_API_KEY: 'or-key',
+      OPENROUTER_MODEL: 'perplexity/sonar',
+      NEWS_ITEM_COUNT: '3',
+    },
+    DEFAULT_FEEDS,
+  );
+
+  assert.equal(requestUrl, 'https://openrouter.ai/api/v1/chat/completions');
+  assert.equal(authorization, 'Bearer or-key');
+  assert.equal(requestBody.model, 'perplexity/sonar');
+  assert.deepEqual(requestBody.plugins, [{ id: 'web' }]);
+
+  const prompt = JSON.stringify(requestBody.messages);
+  assert.ok(prompt.includes('exactly 3 articles'));
+  assert.ok(prompt.includes("Tom's Hardware"));
+
+  assert.equal(items.length, 1);
+  assert.equal(items[0]?.url, 'https://www.tomshardware.com/reviews/rtx-5090');
+});
+
 test('searchNews returns an empty list without an API key', async (t) => {
   const fetchMock = t.mock.method(globalThis, 'fetch', async () => {
     throw new Error('fetch should not be called');
@@ -144,7 +227,7 @@ test('searchNews returns an empty list without an API key', async (t) => {
   assert.equal(fetchMock.mock.callCount(), 0);
 });
 
-test('searchNews returns an empty list when Gemini fails', async (t) => {
+test('searchNews returns an empty list when the provider fails', async (t) => {
   t.mock.method(console, 'error', () => {});
   t.mock.method(
     globalThis,
@@ -153,7 +236,10 @@ test('searchNews returns an empty list when Gemini fails', async (t) => {
   );
 
   const items = await searchNews(
-    { GEMINI_API_KEY: 'secret-key' },
+    {
+      GEMINI_API_KEY: 'secret-key',
+      GEMINI_MODEL: 'gemini-3.6-flash',
+    },
     DEFAULT_FEEDS,
   );
 

@@ -4,13 +4,18 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    command: sh -c "npx wrangler d1 migrations apply DB --local --config wrangler.dev.toml && npx wrangler dev --config wrangler.dev.toml --ip 0.0.0.0 --port 8787 --test-scheduled --var GEMINI_API_KEY:$GEMINI_API_KEY --var GEMINI_MODEL:$GEMINI_MODEL --var NEWS_ITEM_COUNT:$NEWS_ITEM_COUNT"
+    command: sh -c "npx wrangler d1 migrations apply DB --local --config wrangler.dev.toml && npx wrangler dev --config wrangler.dev.toml --ip 0.0.0.0 --port 8787 --test-scheduled --var SEARCH_PROVIDER:${SEARCH_PROVIDER:-} --var GEMINI_API_KEY:$GEMINI_API_KEY --var GEMINI_MODEL:$GEMINI_MODEL --var GEMINI_BASE_URL:${GEMINI_BASE_URL:-} --var OPENROUTER_API_KEY:${OPENROUTER_API_KEY:-} --var OPENROUTER_MODEL:${OPENROUTER_MODEL:-} --var OPENROUTER_BASE_URL:${OPENROUTER_BASE_URL:-} --var NEWS_ITEM_COUNT:$NEWS_ITEM_COUNT"
     ports:
       - '8787:8787'
     environment:
       CI: 'true'
+      SEARCH_PROVIDER: ${SEARCH_PROVIDER:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-}
+      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-}
       NEWS_ITEM_COUNT: ${NEWS_ITEM_COUNT:-}
     volumes:
       - .:/app
@@ -33,8 +38,13 @@ services:
       - node_modules:/app/node_modules
     environment:
       CI: 'true'
+      SEARCH_PROVIDER: ${SEARCH_PROVIDER:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-}
+      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-}
       NEWS_ITEM_COUNT: ${NEWS_ITEM_COUNT:-}
 
   test:

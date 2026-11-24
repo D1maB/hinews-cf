@@ -1,9 +1,11 @@
 # hinews-cf
 
-A minimal [Cloudflare Worker](https://developers.cloudflare.com/workers/) that uses
-Gemini's web search to find the latest PC hardware and gaming news from a fixed list of
-sites, score every article from 1 to 100 in a single AI call, store it in a D1 database,
+A minimal [Cloudflare Worker](https://developers.cloudflare.com/workers/) that uses an
+AI provider's web search to find the latest PC hardware and gaming news from a fixed list
+of sites, score every article from 1 to 100 in a single AI call, store it in a D1 database,
 render the stored news, and publish scheduled items to Telegram and Bluesky.
+
+The search provider is configurable: Gemini (the default) or OpenRouter.
 
 A cron trigger ingests news every 12 hours, publishes due items every minute, and removes
 published items weekly.
@@ -25,19 +27,24 @@ Copy the example environment file and fill in your credentials:
 cp .env.example .env
 ```
 
-| Variable                | Purpose                                                      |
-| ----------------------- | ------------------------------------------------------------ |
-| `CLOUDFLARE_API_TOKEN`  | API token with the Edit Cloudflare Workers template          |
-| `CLOUDFLARE_ACCOUNT_ID` | Optional, when the token can access multiple accounts        |
-| `BSKY_ENABLED`          | Set to `true` to publish headlines to Bluesky                |
-| `BSKY_HANDLE`           | Bluesky handle (e.g. user.bsky.social) used to publish       |
-| `BSKY_APP_PASSWORD`     | Bluesky app password used to publish                         |
-| `TELEGRAM_ENABLED`      | Set to `true` to publish headlines to Telegram               |
-| `TELEGRAM_BOT_TOKEN`    | Telegram bot token used to publish                           |
-| `TELEGRAM_CHAT_ID`      | Telegram chat/channel id used to publish                     |
-| `GEMINI_API_KEY`        | Gemini API key used to search the web and score the articles |
-| `GEMINI_MODEL`          | Gemini model used for the search, e.g. `gemini-3.6-flash`    |
-| `NEWS_ITEM_COUNT`       | How many articles to request per ingestion (default `20`)    |
+| Variable                | Purpose                                                   |
+| ----------------------- | --------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`  | API token with the Edit Cloudflare Workers template       |
+| `CLOUDFLARE_ACCOUNT_ID` | Optional, when the token can access multiple accounts     |
+| `BSKY_ENABLED`          | Set to `true` to publish headlines to Bluesky             |
+| `BSKY_HANDLE`           | Bluesky handle (e.g. user.bsky.social) used to publish    |
+| `BSKY_APP_PASSWORD`     | Bluesky app password used to publish                      |
+| `TELEGRAM_ENABLED`      | Set to `true` to publish headlines to Telegram            |
+| `TELEGRAM_BOT_TOKEN`    | Telegram bot token used to publish                        |
+| `TELEGRAM_CHAT_ID`      | Telegram chat/channel id used to publish                  |
+| `SEARCH_PROVIDER`       | Search provider: `gemini` (default) or `openrouter`       |
+| `GEMINI_API_KEY`        | Gemini API key used when the provider is `gemini`         |
+| `GEMINI_MODEL`          | Gemini model, e.g. `gemini-3.6-flash`                     |
+| `GEMINI_BASE_URL`       | Optional Gemini API base URL override                     |
+| `OPENROUTER_API_KEY`    | OpenRouter API key used when the provider is `openrouter` |
+| `OPENROUTER_MODEL`      | OpenRouter model, e.g. `perplexity/sonar`                 |
+| `OPENROUTER_BASE_URL`   | Optional OpenRouter API base URL override                 |
+| `NEWS_ITEM_COUNT`       | How many articles to request per ingestion (default `20`) |
 
 `.env` is ignored by Git and Docker. `docker-compose` loads it automatically when run
 from the repository root. Commit only `.env.example`.
@@ -49,10 +56,22 @@ Local worker configuration comes from the repository-root `.env` file; nothing n
 
 The app runs entirely in Docker, so you do not need Node.js installed on the host.
 
-1. Set your Gemini API key in the `.env` file:
+1. Choose a provider and set its API key and model in the `.env` file.
+
+   Gemini (default):
 
    ```bash
+   SEARCH_PROVIDER=gemini
    GEMINI_API_KEY=your-key
+   GEMINI_MODEL=gemini-3.6-flash
+   ```
+
+   OpenRouter:
+
+   ```bash
+   SEARCH_PROVIDER=openrouter
+   OPENROUTER_API_KEY=your-key
+   OPENROUTER_MODEL=perplexity/sonar
    ```
 
 2. Build the image and start the worker in the background:
@@ -69,9 +88,9 @@ The app runs entirely in Docker, so you do not need Node.js installed on the hos
    make scheduled
    ```
 
-   This calls Gemini's web search once and stores up to the configured number of scored
-   articles (see `NEWS_ITEM_COUNT`). The page only renders stored rows; it does not call the
-   AI on request.
+   This calls the configured provider's web search once and stores up to the configured
+   number of scored articles (see `NEWS_ITEM_COUNT`). The page only renders stored rows; it
+   does not call the AI on request.
 
 4. Open <http://localhost:8787>. The page lists every stored headline from all
    configured sources, ordered by scheduled time.
@@ -107,13 +126,19 @@ needed for local development; it is only required for deployment.
 The source list lives in `sites.json` and defaults to the built-in PC hardware and gaming
 sources, but can be overridden by setting the `FEEDS` environment variable to a JSON array of
 `{ id, name, url }` objects (e.g. via Wrangler vars). On every ingestion the worker asks
-Gemini, with the Google Search tool enabled, for the latest articles from those sites (20 by
-default). Each result already includes the title,
-description, source, direct link, and a relevance score from 1 to 100, so there is no
-separate per-headline scoring step. Results that come from other sites, or with an invalid
-URL or score, are discarded. Gemini is also instructed not to return duplicate titles or
-URLs. `saveItems` additionally skips articles whose URL already exists in the database,
-so repeated searches never re-insert the same link.
+the configured search provider for the latest articles from those sites (20 by default).
+Gemini is called with the Google Search tool, while OpenRouter is called with its `web`
+plugin enabled. Each result already includes the title, description, source, direct link,
+and a relevance score from 1 to 100, so there is no separate per-headline scoring step.
+Results that come from other sites, or with an invalid URL or score, are discarded. The
+model is also instructed not to return duplicate titles or URLs. `saveItems` additionally
+skips articles whose URL already exists in the database, so repeated searches never
+re-insert the same link.
+
+The provider is selected with `SEARCH_PROVIDER` (`gemini` or `openrouter`). The concrete
+provider implementation is chosen by a factory in `src/search-provider.ts`, so adding
+another provider only requires implementing the `SearchProvider` strategy and registering
+it in the factory.
 
 ## Database
 
@@ -177,9 +202,12 @@ publishing retries, scheduled ingestion, cleanup, and full-page rendering.
 
    ```bash
    docker-compose run --rm app npx wrangler secret put GEMINI_API_KEY --config wrangler.toml
+   docker-compose run --rm app npx wrangler secret put OPENROUTER_API_KEY --config wrangler.toml
    docker-compose run --rm app npx wrangler secret put TELEGRAM_BOT_TOKEN --config wrangler.toml
    docker-compose run --rm app npx wrangler secret put BSKY_APP_PASSWORD --config wrangler.toml
    ```
+
+   Set `SEARCH_PROVIDER` and the matching model as Wrangler vars or secrets.
 
 4. Apply migrations and deploy:
 
@@ -189,8 +217,8 @@ publishing retries, scheduled ingestion, cleanup, and full-page rendering.
 
    The deploy service applies remote migrations before running `wrangler deploy`.
 
-The deployed worker searches the web through Gemini and the cron trigger refreshes the
-database every 12 hours.
+The deployed worker searches the web through the configured provider and the cron trigger
+refreshes the database every 12 hours.
 
 To prefill the production database without waiting for the cron, run the deployed cron
 handler manually from the Cloudflare dashboard.
@@ -204,7 +232,8 @@ handler manually from the Cloudflare dashboard.
 ├── migrations/                 # D1 schema migrations
 ├── sites.json                   # Default news sources for the AI web search
 ├── src/feeds.ts                # Source list, text helpers
-├── src/search.ts               # Gemini web search and result validation
+├── src/search.ts               # Search orchestration and result validation
+├── src/search-provider.ts      # Search provider strategies and factory
 ├── src/ingest.ts               # Deduplicates and stores scored items
 ├── src/store.ts                # D1 reads and batched writes
 ├── src/publish.ts              # Telegram and Bluesky publishing

@@ -3,8 +3,13 @@ import { searchNews } from '../src/search.ts';
 
 const items = await searchNews(
   {
+    SEARCH_PROVIDER: process.env.SEARCH_PROVIDER,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     GEMINI_MODEL: process.env.GEMINI_MODEL,
+    GEMINI_BASE_URL: process.env.GEMINI_BASE_URL,
+    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+    OPENROUTER_MODEL: process.env.OPENROUTER_MODEL,
+    OPENROUTER_BASE_URL: process.env.OPENROUTER_BASE_URL,
     NEWS_ITEM_COUNT: process.env.NEWS_ITEM_COUNT,
   },
   DEFAULT_FEEDS,

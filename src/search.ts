@@ -1,26 +1,35 @@
-import { generateText } from 'ai';
-import { createGoogle } from '@ai-sdk/google';
 import { truncateToSentence } from './feeds.js';
+import { createSearchProvider } from './search-provider.js';
 import type { FeedConfig, SearchItem } from './types.js';
 
 export const DEFAULT_GEMINI_BASE_URL =
   'https://generativelanguage.googleapis.com';
+export const DEFAULT_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+export const DEFAULT_SEARCH_PROVIDER: SearchProviderName = 'gemini';
 export const DEFAULT_NEWS_ITEM_COUNT = 20;
 export const MIN_SCORE = 1;
 export const MAX_SCORE = 100;
 
-const GEMINI_API_VERSION = 'v1beta';
+const SEARCH_PROVIDERS = ['gemini', 'openrouter'] as const;
+
+export type SearchProviderName = (typeof SEARCH_PROVIDERS)[number];
 
 export interface SearchConfig {
+  provider: SearchProviderName;
   baseUrl: string;
   model: string;
   itemCount: number;
-  apiKey?: string;
+  apiKey: string;
 }
 
 export interface SearchEnv {
+  SEARCH_PROVIDER?: string;
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
+  GEMINI_BASE_URL?: string;
+  OPENROUTER_API_KEY?: string;
+  OPENROUTER_MODEL?: string;
+  OPENROUTER_BASE_URL?: string;
   NEWS_ITEM_COUNT?: string;
 }
 
@@ -33,23 +42,50 @@ function parseItemCount(value: string | undefined): number {
   return count;
 }
 
-/** Read the Gemini configuration, applying defaults and validating non-empty values. */
+function parseProvider(value: string | undefined): SearchProviderName {
+  const provider = (value || DEFAULT_SEARCH_PROVIDER).trim().toLowerCase();
+  if (!SEARCH_PROVIDERS.includes(provider as SearchProviderName)) {
+    throw new Error(
+      `SEARCH_PROVIDER must be one of: ${SEARCH_PROVIDERS.join(', ')}`,
+    );
+  }
+  return provider as SearchProviderName;
+}
+
+function requireValue(value: string | undefined, name: string): string {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    throw new Error(`${name} must not be empty`);
+  }
+  return trimmed;
+}
+
+/** Read the search configuration, applying defaults and validating non-empty values. */
 export function getSearchOptions(env: SearchEnv = {}): SearchConfig {
-  const model = (env.GEMINI_MODEL || '').trim();
-  const apiKey = env.GEMINI_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY must not be empty');
+  const provider = parseProvider(env.SEARCH_PROVIDER);
+  const itemCount = parseItemCount(env.NEWS_ITEM_COUNT);
+
+  if (provider === 'openrouter') {
+    const config = {
+      provider,
+      baseUrl: env.OPENROUTER_BASE_URL?.trim() || DEFAULT_OPENROUTER_BASE_URL,
+      apiKey: requireValue(env.OPENROUTER_API_KEY, 'OPENROUTER_API_KEY'),
+      model: requireValue(env.OPENROUTER_MODEL, 'OPENROUTER_MODEL'),
+      itemCount,
+    };
+    console.log(`Using OpenRouter model ${config.model}`);
+    return config;
   }
-  if (!model) {
-    throw new Error('GEMINI_MODEL must not be empty');
-  }
-  console.log(`Using Gemini model ${model}`);
-  return {
-    baseUrl: DEFAULT_GEMINI_BASE_URL,
-    model,
-    itemCount: parseItemCount(env.NEWS_ITEM_COUNT),
-    apiKey,
+
+  const config = {
+    provider,
+    baseUrl: env.GEMINI_BASE_URL?.trim() || DEFAULT_GEMINI_BASE_URL,
+    apiKey: requireValue(env.GEMINI_API_KEY, 'GEMINI_API_KEY'),
+    model: requireValue(env.GEMINI_MODEL, 'GEMINI_MODEL'),
+    itemCount,
   };
+  console.log(`Using Gemini model ${config.model}`);
+  return config;
 }
 
 function siteUrl(source: FeedConfig): string {
@@ -92,9 +128,10 @@ export function buildPrompt(sources: FeedConfig[], itemCount: number): string {
 }
 
 /**
- * Search the web with Gemini via the Vercel AI SDK and return the latest scored news items.
+ * Search the web with the configured provider and return the latest scored
+ * news items.
  *
- * Returns an empty list when the API key is missing or the request fails.
+ * Returns an empty list when the configuration is missing or the request fails.
  */
 export async function searchNews(
   env: SearchEnv,
@@ -105,55 +142,25 @@ export async function searchNews(
     options = getSearchOptions(env);
   } catch (error) {
     console.error(
-      'Gemini search is not configured:',
+      'News search is not configured:',
       error instanceof Error ? error.message : error,
     );
     return [];
   }
-  if (!options.apiKey) {
-    console.error('GEMINI_API_KEY is not configured');
-    return [];
-  }
 
-  const text = await requestSearch(
-    options,
-    buildPrompt(sources, options.itemCount),
-  );
+  const provider = createSearchProvider(options);
+  const text = await provider.request(buildPrompt(sources, options.itemCount));
   if (text === null) return [];
 
   return parseSearchItems(text, sources, options.itemCount);
 }
 
+/** Run a single search request through the configured provider. */
 export async function requestSearch(
   options: SearchConfig,
   prompt: string,
 ): Promise<string | null> {
-  try {
-    const google = createGoogle({
-      apiKey: options.apiKey,
-      baseURL: options.baseUrl
-        .replace(/\/+$/, '')
-        .endsWith(`/${GEMINI_API_VERSION}`)
-        ? options.baseUrl.replace(/\/+$/, '')
-        : `${options.baseUrl.replace(/\/+$/, '')}/${GEMINI_API_VERSION}`,
-    });
-    const modelId = options.model.replace(/^models\//, '');
-    const { text } = await generateText({
-      model: google(modelId),
-      prompt,
-      tools: {
-        google_search: google.tools.googleSearch({}),
-      },
-    });
-
-    return text ?? '';
-  } catch (error) {
-    console.error(
-      'Gemini search failed:',
-      error instanceof Error ? error.message : error,
-    );
-    return null;
-  }
+  return createSearchProvider(options).request(prompt);
 }
 
 /** Extract and validate the AI's JSON payload into scored search items. */

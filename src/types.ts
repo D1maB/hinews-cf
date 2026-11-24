@@ -62,8 +62,13 @@ export interface Database {
 export interface Env {
   DB: Database;
   FEEDS?: string;
+  SEARCH_PROVIDER?: string;
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
+  GEMINI_BASE_URL?: string;
+  OPENROUTER_API_KEY?: string;
+  OPENROUTER_MODEL?: string;
+  OPENROUTER_BASE_URL?: string;
   NEWS_ITEM_COUNT?: string;
   TELEGRAM_ENABLED?: string | boolean;
   TELEGRAM_BOT_TOKEN?: string;

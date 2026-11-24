@@ -117,8 +117,10 @@ All local infrastructure runs in Docker on Alpine:
 - Commit `.env.example` with empty values; never commit real credentials.
 - Never hardcode secrets in `docker-compose.yml`, source files, or scripts.
 - `docker-compose` loads `.env` automatically from the repository root.
-- `GEMINI_API_KEY` is required for ingestion; local worker configuration comes solely from
-  the repository-root `.env` file (do not use `.dev.vars`).
+- Ingestion needs the credentials for the configured search provider: `GEMINI_API_KEY`
+  when `SEARCH_PROVIDER=gemini` (default) or `OPENROUTER_API_KEY` when
+  `SEARCH_PROVIDER=openrouter`. Local worker configuration comes solely from the
+  repository-root `.env` file (do not use `.dev.vars`).
 - Production secrets are set with `wrangler secret put` and read from `env`.
 
 ## Local development
