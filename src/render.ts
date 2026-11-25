@@ -90,6 +90,7 @@ export function renderPage(
   lastSync: string | null = null,
   items: StoredItem[] = [],
 ): string {
+  const sourceLabel = 'RSS feeds';
   const list =
     items.length > 0
       ? `<ul class="items">${items.map((item) => renderItem(item)).join('')}</ul>`
@@ -175,7 +176,7 @@ export function renderPage(
   <div class="container">
     <header>
       <h1>News</h1>
-      <p class="subtitle">${total} stored headline${total === 1 ? '' : 's'} from ${feeds.length} sources via AI web search.</p>
+      <p class="subtitle">${total} stored headline${total === 1 ? '' : 's'} from ${feeds.length} sources via ${sourceLabel}.</p>
       <p class="sync">Last sync: ${escapeHtml(formatSyncDate(lastSync) || 'never')}</p>
     </header>
     <main class="list">

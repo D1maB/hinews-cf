@@ -4,13 +4,14 @@ export interface FeedConfig {
   url: string;
 }
 
-/** A news article returned by the AI web search. */
+/** A normalized news item parsed from a feed. */
 export interface SearchItem {
   title: string;
   description: string;
   source: string;
   url: string;
   score: number;
+  publishedAt?: string;
 }
 
 export interface NewItem {
@@ -62,12 +63,6 @@ export interface Database {
 export interface Env {
   DB: Database;
   FEEDS?: string;
-  SEARCH_PROVIDER?: string;
-  GEMINI_API_KEY?: string;
-  GEMINI_MODEL?: string;
-  OPENROUTER_API_KEY?: string;
-  OPENROUTER_MODEL?: string;
-  NEWS_ITEM_COUNT?: string;
   TELEGRAM_ENABLED?: string | boolean;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;

@@ -7,36 +7,33 @@ import type { Env } from '../src/types.ts';
 
 const REQUEST = new Request('https://example.com/');
 
-const ARTICLES = [
-  {
-    title: 'RTX 5090 review',
-    description: 'A deep dive into the new flagship GPU.',
-    source: 'Wccftech',
-    url: 'https://wccftech.com/reviews/rtx-5090',
-    score: 90,
-  },
-  {
-    title: 'Ryzen 9950X benchmarks',
-    description: 'The new CPU in our test bench.',
-    source: 'TechPowerUp',
-    url: 'https://www.techpowerup.com/review/ryzen-9950x',
-    score: 75,
-  },
-];
+const RSS_XML = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <item>
+      <title>RTX 5090 review</title>
+      <link>https://wccftech.com/reviews/rtx-5090</link>
+      <description>A deep dive into the new flagship GPU.</description>
+      <pubDate>${new Date(Date.now() - 60 * 60 * 1000).toUTCString()}</pubDate>
+    </item>
+    <item>
+      <title>Ryzen 9950X benchmarks</title>
+      <link>https://www.techpowerup.com/review/ryzen-9950x</link>
+      <description>The new CPU in our test bench.</description>
+      <pubDate>${new Date(Date.now() - 90 * 60 * 1000).toUTCString()}</pubDate>
+    </item>
+  </channel>
+</rss>`;
 
-function mockSearch(t: TestContext, items: unknown = ARTICLES): void {
+function mockRssFetch(t: TestContext, body = RSS_XML): void {
   t.mock.method(
     globalThis,
     'fetch',
     async () =>
-      new Response(
-        JSON.stringify({
-          candidates: [
-            { content: { parts: [{ text: JSON.stringify(items) }] } },
-          ],
-        }),
-        { status: 200 },
-      ),
+      new Response(body, {
+        status: 200,
+        headers: { 'content-type': 'application/rss+xml' },
+      }),
   );
 }
 
@@ -68,7 +65,7 @@ test('renders every stored item from the database', async () => {
 
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type') ?? '', /^text\/html/);
-  assert.match(html, /7 stored headlines from 4 sources via AI web search/);
+  assert.match(html, /7 stored headlines from 4 sources via RSS feeds/);
 
   for (const row of rows) {
     assert.ok(html.includes(row.title), `missing ${row.title}`);
@@ -124,17 +121,14 @@ test('renders an empty page when the database has no items yet', async () => {
   assert.match(first, /Last sync: never/);
 });
 
-test('scheduled runs store fresh items', async (t) => {
+test('scheduled runs store fresh items from RSS feeds', async (t) => {
   t.mock.method(console, 'log', () => {});
   const db = createFakeDb();
-  mockSearch(t);
+  mockRssFetch(t);
 
-  await runScheduled(
-    { DB: db, GEMINI_API_KEY: 'secret-key', GEMINI_MODEL: 'gemini-3.6-flash' },
-    '0 */12 * * *',
-  );
+  await runScheduled({ DB: db }, '0 */12 * * *');
 
-  assert.equal(db.rows.size, ARTICLES.length);
+  assert.equal(db.rows.size, 2);
 });
 
 test('scheduled runs append fresh items without clearing existing ones', async (t) => {
@@ -148,17 +142,14 @@ test('scheduled runs append fresh items without clearing existing ones', async (
       published_at: '2024-01-01T00:00:00.000Z',
       status: 'published',
       scheduled_at: '2026-11-01T10:00:00.000Z',
-      score: 80,
+      score: 0,
     },
   ]);
-  mockSearch(t);
+  mockRssFetch(t);
 
-  await runScheduled(
-    { DB: db, GEMINI_API_KEY: 'secret-key', GEMINI_MODEL: 'gemini-3.6-flash' },
-    '0 */12 * * *',
-  );
+  await runScheduled({ DB: db }, '0 */12 * * *');
 
-  assert.equal(db.rows.size, ARTICLES.length + 1);
+  assert.equal(db.rows.size, 3);
 });
 
 test('scheduled cleanup removes published items every 7 days', async (t) => {
@@ -172,7 +163,7 @@ test('scheduled cleanup removes published items every 7 days', async (t) => {
       published_at: '2024-01-01T00:00:00.000Z',
       status: 'published',
       scheduled_at: '2026-11-01T10:00:00.000Z',
-      score: 60,
+      score: 0,
     },
     {
       feed_id: 'kitguru',
@@ -182,7 +173,7 @@ test('scheduled cleanup removes published items every 7 days', async (t) => {
       published_at: '2024-01-02T00:00:00.000Z',
       status: 'scheduled',
       scheduled_at: '2026-11-02T10:00:00.000Z',
-      score: 70,
+      score: 0,
     },
   ]);
 

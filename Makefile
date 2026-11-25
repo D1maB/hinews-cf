@@ -1,4 +1,4 @@
-.PHONY: up down logs build test typecheck deploy query migrate help qa wipe search cron re
+.PHONY: up down logs build test typecheck deploy query migrate help qa wipe cron re
 
 # The standalone v1 CLI is the supported local runtime. CI overrides this with
 # `DOCKER_COMPOSE="docker compose"` because GitHub runners ship only Compose v2.
@@ -15,9 +15,6 @@ down:
 
 logs:
 	$(DOCKER_COMPOSE) logs -f app
-
-search:
-	$(DOCKER_COMPOSE) run --rm tools npx tsx scripts/search.ts
 
 build:
 	$(DOCKER_COMPOSE) build app
@@ -64,7 +61,6 @@ help:
 	@echo "  make up         - build and start the worker (http://localhost:8787)"
 	@echo "  make down       - stop and remove containers"
 	@echo "  make logs       - follow worker logs"
-	@echo "  make search     - run the Gemini news search and print its JSON result"
 	@echo "  make build      - rebuild the app image"
 	@echo "  make test       - run the test suite"
 	@echo "  make typecheck  - typecheck the project"

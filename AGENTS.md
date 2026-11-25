@@ -73,8 +73,8 @@ Write clean, readable JavaScript as an experienced developer would:
 - Never edit a migration that has already been applied.
 - `items.url` is unique and writes use `INSERT OR IGNORE`; keep deduplication enforced by
   the database rather than application-side checks. Ingestion also skips articles whose
-  URL is already stored, and the search prompt tells Gemini not to return duplicates.
-- Keep SQL in `src/store.ts`; AI search parsing belongs in `src/search.ts` and
+  URL is already stored.
+- Keep SQL in `src/store.ts`; RSS feed parsing belongs in `src/rss.ts` and
   orchestration in `src/ingest.ts`.
 
 ## Infrastructure
@@ -117,10 +117,8 @@ All local infrastructure runs in Docker on Alpine:
 - Commit `.env.example` with empty values; never commit real credentials.
 - Never hardcode secrets in `docker-compose.yml`, source files, or scripts.
 - `docker-compose` loads `.env` automatically from the repository root.
-- Ingestion needs the credentials for the configured search provider: `GEMINI_API_KEY`
-  when `SEARCH_PROVIDER=gemini` (default) or `OPENROUTER_API_KEY` when
-  `SEARCH_PROVIDER=openrouter`. Local worker configuration comes solely from the
-  repository-root `.env` file (do not use `.dev.vars`).
+- Local worker configuration comes solely from the repository-root `.env` file (do not
+  use `.dev.vars`).
 - Production secrets are set with `wrangler secret put` and read from `env`.
 
 ## Local development
@@ -140,7 +138,8 @@ Common tasks are also available as Makefile targets that forward to the Compose 
 above: `make up`, `make down`, `make logs`, `make build`, `make test`,
 `make typecheck`, `make qa`, `make re`, and `make deploy`.
 
-## News count
+## News source
 
-The number of articles requested per ingestion is configurable through the
-`NEWS_ITEM_COUNT` environment variable (default `20`, validated as a positive integer).
+Ingestion fetches and parses the configured RSS feeds listed in `sites.json` (or
+overridden by `FEEDS`). Use RSS/JSON feed parsing libraries rather than hand-rolled
+parsing where practical.

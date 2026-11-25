@@ -62,3 +62,23 @@ export function truncateToSentence(
   );
   return (lastIndex > 0 ? sliced.slice(0, lastIndex + 1) : sliced).trim();
 }
+
+/** Check if a URL is accessible by making a HEAD request. */
+export async function isUrlValid(
+  urlString: string,
+  timeoutMs = 8000,
+): Promise<boolean> {
+  try {
+    const abort = new AbortController();
+    const timeoutId = setTimeout(() => abort.abort(), timeoutMs);
+    const response = await fetch(urlString, {
+      method: 'HEAD',
+      signal: abort.signal,
+      headers: { 'User-Agent': 'hinews-cf/1.0' },
+    });
+    clearTimeout(timeoutId);
+    return response.ok;
+  } catch {
+    return false;
+  }
+}

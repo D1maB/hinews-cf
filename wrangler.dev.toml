@@ -2,10 +2,7 @@ name = "hinews-cf"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
-# Local development secrets (GEMINI_API_KEY, OPENROUTER_API_KEY) and variables
-# (SEARCH_PROVIDER, GEMINI_MODEL, OPENROUTER_MODEL, NEWS_ITEM_COUNT) come solely
-# from the repository-root .env file, which docker-compose passes into the container
-# environment.
+# Local worker configuration comes from the repository-root .env file.
 [[d1_databases]]
 binding = "DB"
 database_name = "hinews-cf"

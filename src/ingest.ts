@@ -1,5 +1,5 @@
-import { getFeeds } from './feeds.js';
-import { searchNews, isUrlValid } from './search.js';
+import { getFeeds, isUrlValid } from './feeds.js';
+import { fetchRssItems } from './rss.js';
 import {
   saveItems,
   setLastSync,
@@ -61,10 +61,10 @@ function resolveSource(
   return { id: slugify(fallbackName), name: fallbackName, url };
 }
 
-/** Search the web for the latest news, score it, and store new headlines. */
+/** Fetch the latest news from RSS feeds and store new headlines. */
 export async function ingestNews(env: Env): Promise<IngestResult> {
   const sources = getFeeds(env);
-  const found = await searchNews(env, sources);
+  const found = await fetchRssItems(sources);
 
   const items: NewItem[] = found.map((item) => {
     const source = resolveSource(item.source, item.url, sources);
@@ -73,7 +73,7 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
       feedName: source.name,
       title: item.title,
       url: item.url,
-      publishedAt: new Date().toISOString(),
+      publishedAt: item.publishedAt ?? new Date().toISOString(),
       score: item.score,
       description: item.description || undefined,
     };
@@ -88,9 +88,7 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
   const urlValidity = await Promise.all(
     candidates.map((item) => isUrlValid(item.url)),
   );
-  const validCandidates = candidates.filter(
-    (_, index) => urlValidity[index],
-  );
+  const validCandidates = candidates.filter((_, index) => urlValidity[index]);
 
   const lastScheduledAt = await getLastScheduledAt(env.DB);
   const baseTime = lastScheduledAt
@@ -105,7 +103,7 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
 
   await setLastSync(env.DB, new Date().toISOString());
 
-  console.log(`Stored ${inserted} new item(s) from AI web search`);
+  console.log(`Stored ${inserted} new item(s) from RSS feeds`);
 
   return {
     inserted,
