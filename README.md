@@ -34,6 +34,8 @@ cp .env.example .env
 | `TELEGRAM_ENABLED`      | Set to `true` to publish headlines to Telegram         |
 | `TELEGRAM_BOT_TOKEN`    | Telegram bot token used to publish                     |
 | `TELEGRAM_CHAT_ID`      | Telegram chat/channel id used to publish               |
+| `LOCAL_FEEDS_URL`       | Base URL for downloaded local feeds in development     |
+| `FEED_ITEM_LIMIT`       | Max items to keep from each feed (default `10`)        |
 
 `.env` is ignored by Git and Docker. `docker-compose` loads it automatically when run
 from the repository root. Commit only `.env.example`.

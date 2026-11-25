@@ -4,12 +4,13 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    command: sh -c "npx wrangler d1 migrations apply DB --local --config wrangler.dev.toml && npx wrangler dev --config wrangler.dev.toml --ip 0.0.0.0 --port 8787 --test-scheduled --var LOCAL_FEEDS_URL:${LOCAL_FEEDS_URL:-http://feeds:8080}"
+    command: sh -c "npx wrangler d1 migrations apply DB --local --config wrangler.dev.toml && npx wrangler dev --config wrangler.dev.toml --ip 0.0.0.0 --port 8787 --test-scheduled --var LOCAL_FEEDS_URL:${LOCAL_FEEDS_URL:-http://feeds:8080} --var FEED_ITEM_LIMIT:${FEED_ITEM_LIMIT:-10}"
     ports:
       - '8787:8787'
     environment:
       CI: 'true'
       LOCAL_FEEDS_URL: ${LOCAL_FEEDS_URL:-http://feeds:8080}
+      FEED_ITEM_LIMIT: ${FEED_ITEM_LIMIT:-10}
     depends_on:
       - feeds
     volumes:

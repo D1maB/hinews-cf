@@ -1,5 +1,5 @@
 import { getFeeds, isUrlValid } from './feeds.js';
-import { fetchRssItems } from './rss.js';
+import { fetchRssItems, parseFeedItemLimit } from './rss.js';
 import {
   saveItems,
   setLastSync,
@@ -64,7 +64,14 @@ function resolveSource(
 /** Fetch the latest news from RSS feeds and store new headlines. */
 export async function ingestNews(env: Env): Promise<IngestResult> {
   const sources = getFeeds(env);
-  const found = await fetchRssItems(sources);
+  const feedItemLimit = parseFeedItemLimit(env.FEED_ITEM_LIMIT);
+  console.log(
+    env.LOCAL_FEEDS_URL?.trim()
+      ? `Using local feeds: ${env.LOCAL_FEEDS_URL}`
+      : 'Using online feeds',
+  );
+  console.log(`Feed item limit: ${feedItemLimit}`);
+  const found = await fetchRssItems(sources, feedItemLimit);
   console.log(`Fetched ${found.length} feed item(s) total`);
 
   const items: NewItem[] = found.map((item) => {

@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test, { type TestContext } from 'node:test';
 
-import { fetchRssItems, parseRssFeed } from '../src/rss.ts';
+import {
+  DEFAULT_FEED_ITEM_LIMIT,
+  fetchRssItems,
+  parseFeedItemLimit,
+  parseRssFeed,
+} from '../src/rss.ts';
 import type { FeedConfig, SearchItem } from '../src/types.ts';
 
 function isoMinutesAgo(minutes: number): string {
@@ -120,4 +125,22 @@ test('fetchRssItems skips feeds that fail to respond', async (t) => {
   const items = await fetchRssItems(SOURCES);
 
   assert.deepEqual(items, []);
+});
+
+test('parseFeedItemLimit defaults and validates values', () => {
+  assert.equal(parseFeedItemLimit(undefined), DEFAULT_FEED_ITEM_LIMIT);
+  assert.equal(parseFeedItemLimit(''), DEFAULT_FEED_ITEM_LIMIT);
+  assert.equal(parseFeedItemLimit('5'), 5);
+  assert.throws(() => parseFeedItemLimit('0'), /FEED_ITEM_LIMIT/);
+  assert.throws(() => parseFeedItemLimit('nope'), /FEED_ITEM_LIMIT/);
+});
+
+test('fetchRssItems limits items per feed', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  mockFetch(t, RSS_XML);
+
+  const items = await fetchRssItems(SOURCES, 1);
+
+  assert.equal(items.length, 1);
+  assert.equal(items[0]?.title, 'RTX 5090 review');
 });

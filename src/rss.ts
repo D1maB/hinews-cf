@@ -5,6 +5,7 @@ import type { FeedConfig, SearchItem } from './types.js';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 const FEED_USER_AGENT = 'hinews-cf/1.0';
+export const DEFAULT_FEED_ITEM_LIMIT = 10;
 
 /** A normalized news item parsed from a feed. */
 export interface RssItem {
@@ -217,12 +218,23 @@ function toSearchItem(source: FeedConfig, item: RssItem): SearchItem | null {
   };
 }
 
+/** Read the per-feed item limit, defaulting to 10. */
+export function parseFeedItemLimit(value: string | undefined): number {
+  if (value == null || value.trim() === '') return DEFAULT_FEED_ITEM_LIMIT;
+  const limit = Number(value);
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new Error('FEED_ITEM_LIMIT must be a positive integer');
+  }
+  return limit;
+}
+
 /**
  * Fetch every configured feed and turn its entries into news items.
  * Feeds that fail to respond are skipped, the rest are still returned.
  */
 export async function fetchRssItems(
   sources: FeedConfig[],
+  limit = DEFAULT_FEED_ITEM_LIMIT,
 ): Promise<SearchItem[]> {
   const items: SearchItem[] = [];
 
@@ -242,8 +254,10 @@ export async function fetchRssItems(
       }
 
       const content = await response.text();
-      const parsed = parseRssFeed(content);
-      console.log(`Parsed ${parsed.length} item(s) from ${source.name}`);
+      const parsed = parseRssFeed(content).slice(0, limit);
+      console.log(
+        `Parsed ${parsed.length} item(s) from ${source.name} (limit ${limit})`,
+      );
       for (const item of parsed) {
         const searchItem = toSearchItem(source, item);
         if (searchItem) items.push(searchItem);
