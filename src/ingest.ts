@@ -1,3 +1,9 @@
+import {
+  cosineSimilarity,
+  embedText,
+  getEmbeddingConfig,
+  parseEmbedding,
+} from './embedding.js';
 import { getFeeds, isUrlValid } from './feeds.js';
 import { fetchRssItems, parseFeedItemLimit } from './rss.js';
 import { scoreItems } from './score.js';
@@ -7,6 +13,7 @@ import {
   getExistingUrls,
   getLastScheduledAt,
   listNewItems,
+  listStoredEmbeddings,
   saveItems,
   scheduleScoredItems,
   setLastSync,
@@ -174,11 +181,55 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
         `Skipped ${freshCandidates.length - prepared.length} item(s) below score threshold ${minScoreThreshold}`,
       );
 
+      const embeddingConfig = getEmbeddingConfig(env);
+      if (embeddingConfig.enabled && prepared.length > 0) {
+        const stored = await listStoredEmbeddings(env.DB);
+        const knownEmbeddings = stored
+          .map((row) => ({
+            url: row.url,
+            embedding: parseEmbedding(row.embedding),
+          }))
+          .filter(
+            (row): row is { url: string; embedding: number[] } =>
+              row.embedding !== null,
+          );
+
+        const uniquePrepared: typeof prepared = [];
+        for (const item of prepared) {
+          const text = `${item.title}\n${item.description ?? ''}`.trim();
+          const embedding = await embedText(embeddingConfig, text);
+          if (!embedding) {
+            console.warn(`Embedding failed, keeping item: ${item.url}`);
+            uniquePrepared.push({ ...item, embedding: null });
+            continue;
+          }
+
+          const duplicate = knownEmbeddings.find(
+            (known) =>
+              cosineSimilarity(known.embedding, embedding) >=
+              embeddingConfig.threshold,
+          );
+          if (duplicate) {
+            console.log(
+              `Skipped duplicate by embedding (${duplicate.url}): ${item.url}`,
+            );
+            continue;
+          }
+
+          knownEmbeddings.push({ url: item.url, embedding });
+          uniquePrepared.push({
+            ...item,
+            embedding: JSON.stringify(embedding),
+          });
+        }
+        prepared = uniquePrepared;
+      }
+
       inserted = await saveItems(env.DB, prepared);
       console.log(`Saved ${inserted} new item(s) to DB`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error(`Can't score items, skipping save: ${message}`);
+      console.error(`Can't score/dedupe items, skipping save: ${message}`);
     }
   }
 

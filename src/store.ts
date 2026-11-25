@@ -3,18 +3,18 @@ import type { Database, NewItem, PublishTarget, StoredItem } from './types.js';
 const SCHEDULE_WINDOW_MINUTES = 12 * 60;
 
 const INSERT_ITEM = `
-  INSERT OR IGNORE INTO items (feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  INSERT OR IGNORE INTO items (feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description, embedding)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
 const LIST_ITEMS = `
-  SELECT feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description, telegram_published, bsky_published
+  SELECT feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description, embedding, telegram_published, bsky_published
   FROM items
   ORDER BY id
 `;
 
 const LIST_NEW_ITEMS = `
-  SELECT feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description, telegram_published, bsky_published
+  SELECT feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description, embedding, telegram_published, bsky_published
   FROM items
   WHERE status = 'new'
   ORDER BY id
@@ -22,9 +22,34 @@ const LIST_NEW_ITEMS = `
 
 const SELECT_URLS = `SELECT url FROM items`;
 
+const LIST_EMBEDDINGS = `
+  SELECT url, title, embedding
+  FROM items
+  WHERE embedding IS NOT NULL
+  ORDER BY id DESC
+  LIMIT ?
+`;
+
 export async function getExistingUrls(db: Database): Promise<Set<string>> {
   const { results } = await db.prepare(SELECT_URLS).all<{ url: string }>();
   return new Set(results.map((row) => row.url));
+}
+
+export interface StoredEmbedding {
+  url: string;
+  title: string;
+  embedding: string | null;
+}
+
+export async function listStoredEmbeddings(
+  db: Database,
+  limit = 200,
+): Promise<StoredEmbedding[]> {
+  const { results } = await db
+    .prepare(LIST_EMBEDDINGS)
+    .bind(limit)
+    .all<StoredEmbedding>();
+  return results;
 }
 
 const GET_META = `SELECT value FROM meta WHERE key = ?`;
@@ -83,6 +108,7 @@ export async function saveItems(
         status,
         scheduledAt,
         item.description ?? null,
+        item.embedding ?? null,
       );
   });
 

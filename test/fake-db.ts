@@ -13,6 +13,7 @@ export interface FakeRow {
   status?: string;
   scheduled_at?: string | null;
   description?: string | null;
+  embedding?: string | null;
   telegram_published?: number;
   bsky_published?: number;
 }
@@ -189,6 +190,7 @@ class FakeStatement implements DbStatement {
       status,
       scheduledAt,
       description,
+      embedding,
     ] = this.args;
     const rowUrl = String(url);
     const rowTitle = String(title);
@@ -219,6 +221,7 @@ class FakeStatement implements DbStatement {
       status: String(status ?? 'new'),
       scheduled_at: scheduledAt == null ? null : String(scheduledAt),
       description: description == null ? null : String(description),
+      embedding: embedding == null ? null : String(embedding),
       telegram_published: 0,
       bsky_published: 0,
     });
@@ -237,6 +240,7 @@ export function createFakeDb(rows: FakeRow[] = []): FakeDatabase {
         row.url,
         {
           ...row,
+          embedding: row.embedding ?? null,
           telegram_published: row.telegram_published ?? 0,
           bsky_published: row.bsky_published ?? 0,
         },

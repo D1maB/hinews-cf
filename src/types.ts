@@ -23,6 +23,7 @@ export interface NewItem {
   score: number | null;
   description?: string;
   scheduledAt?: string;
+  embedding?: string | null;
 }
 
 export type PublishTarget = 'telegram' | 'bluesky';
@@ -37,6 +38,7 @@ export interface StoredItem {
   status: string;
   scheduled_at: string | null;
   description: string | null;
+  embedding: string | null;
   telegram_published: number;
   bsky_published: number;
 }
@@ -73,6 +75,9 @@ export interface Env {
   AI_SCORE_BATCH_SIZE?: string;
   AI_SCORE_TIMEOUT_MS?: string;
   MIN_SCORE_THRESHOLD?: string;
+  DUPLICATE_PREVENTION_ENABLED?: string | boolean;
+  EMBEDDING_MODEL?: string;
+  DUPLICATE_SIMILARITY_THRESHOLD?: string;
   TELEGRAM_ENABLED?: string | boolean;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;

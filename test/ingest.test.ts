@@ -254,7 +254,7 @@ test('does not save items when AI scoring fails', async (t) => {
 
   assert.equal(inserted, 0);
   assert.equal(db.rows.size, 0);
-  assert.ok(errors.some((line) => line.includes("Can't score items")));
+  assert.ok(errors.some((line) => line.includes("Can't score/dedupe items")));
 });
 
 test('skips deals and promo items', async (t) => {
@@ -330,4 +330,62 @@ test('skips items below MIN_SCORE_THRESHOLD', async (t) => {
   assert.equal(db.rows.size, 1);
   assert.ok(db.rows.has('https://wccftech.com/reviews/rtx-5090'));
   assert.ok(!db.rows.has('https://www.techpowerup.com/review/ryzen-9950x'));
+});
+
+test('skips near-duplicate items when embedding dedupe is enabled', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  t.mock.method(console, 'warn', () => {});
+  t.mock.method(globalThis, 'fetch', async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes(':embedContent')) {
+      return new Response(
+        JSON.stringify({ embedding: { values: [1, 0, 0] } }),
+        { status: 200 },
+      );
+    }
+    if (url.includes('generativelanguage.googleapis.com')) {
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify([
+                      {
+                        url: 'https://wccftech.com/reviews/rtx-5090',
+                        score: 90,
+                      },
+                      {
+                        url: 'https://www.techpowerup.com/review/ryzen-9950x',
+                        score: 90,
+                      },
+                    ]),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    }
+    return new Response(RSS_XML, { status: 200 });
+  });
+
+  const db = createFakeDb();
+  const env = {
+    DB: db,
+    AI_PROVIDER: 'google',
+    GEMINI_API_KEY: 'k',
+    GEMINI_MODEL: 'gemini-2.5-flash',
+    DUPLICATE_PREVENTION_ENABLED: 'true',
+    EMBEDDING_MODEL: 'text-embedding-004',
+    DUPLICATE_SIMILARITY_THRESHOLD: '0.9',
+  } as Env;
+
+  const { inserted } = await ingestNews(env);
+
+  assert.equal(inserted, 1);
+  assert.equal(db.rows.size, 1);
 });
