@@ -228,6 +228,7 @@ export async function fetchRssItems(
 
   for (const source of sources) {
     try {
+      console.log(`Fetching feed ${source.name}: ${source.url}`);
       const response = await fetch(source.url, {
         method: 'GET',
         headers: { 'User-Agent': FEED_USER_AGENT },
@@ -241,7 +242,9 @@ export async function fetchRssItems(
       }
 
       const content = await response.text();
-      for (const item of parseRssFeed(content)) {
+      const parsed = parseRssFeed(content);
+      console.log(`Parsed ${parsed.length} item(s) from ${source.name}`);
+      for (const item of parsed) {
         const searchItem = toSearchItem(source, item);
         if (searchItem) items.push(searchItem);
       }

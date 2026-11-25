@@ -26,25 +26,40 @@ export const DEFAULT_FEEDS: FeedConfig[] = Array.isArray(sitesFromJson)
   ? sitesFromJson.filter(isFeedConfig)
   : [];
 
+function applyLocalFeedsUrl(
+  feeds: FeedConfig[],
+  localFeedsUrl: string | undefined,
+): FeedConfig[] {
+  const base = localFeedsUrl?.trim().replace(/\/+$/, '');
+  if (!base) return feeds;
+  return feeds.map((feed) => ({
+    ...feed,
+    url: `${base}/${feed.id}.xml`,
+  }));
+}
+
 /** Read the source list, falling back to the built-in feeds for invalid overrides. */
-export function getFeeds(env: Pick<Env, 'FEEDS'> = {}): FeedConfig[] {
+export function getFeeds(
+  env: Pick<Env, 'FEEDS' | 'LOCAL_FEEDS_URL'> = {},
+): FeedConfig[] {
   const raw = env.FEEDS;
   if (Array.isArray(raw)) {
     const feeds = raw.filter(isFeedConfig);
-    if (feeds.length > 0) return feeds;
+    if (feeds.length > 0) return applyLocalFeedsUrl(feeds, env.LOCAL_FEEDS_URL);
   }
   if (typeof raw === 'string') {
     try {
       const parsed: unknown = JSON.parse(raw);
       if (Array.isArray(parsed)) {
         const feeds = parsed.filter(isFeedConfig);
-        if (feeds.length > 0) return feeds;
+        if (feeds.length > 0)
+          return applyLocalFeedsUrl(feeds, env.LOCAL_FEEDS_URL);
       }
     } catch {
       // Fall back to the built-in feed list.
     }
   }
-  return DEFAULT_FEEDS;
+  return applyLocalFeedsUrl(DEFAULT_FEEDS, env.LOCAL_FEEDS_URL);
 }
 
 /** Cut text at the last sentence boundary that fits within `maxLength`. */

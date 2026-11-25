@@ -12,11 +12,6 @@
   {
     "id": "techspot",
     "name": "TechSpot",
-    "url": "https://www.techspot.com/rss/"
-  },
-  {
-    "id": "videocardz",
-    "name": "videocardz",
-    "url": "https://www.videocardz.com/feed/"
+    "url": "https://www.techspot.com/backend.xml"
   }
 ]

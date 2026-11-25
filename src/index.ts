@@ -1,15 +1,14 @@
 import { getFeeds } from './feeds.js';
-import { listItems, getLastSync, deletePublished } from './store.js';
+import {
+  listItems,
+  getLastSync,
+  deletePublished,
+  sortByScheduled,
+} from './store.js';
 import { ingestNews } from './ingest.js';
 import { renderPage } from './render.js';
 import { publishScheduled } from './publish.js';
-import type { Env, StoredItem } from './types.js';
-
-function sortByScheduled(items: StoredItem[]): StoredItem[] {
-  return [...items].sort((a, b) =>
-    (a.scheduled_at ?? '').localeCompare(b.scheduled_at ?? ''),
-  );
-}
+import type { Env } from './types.js';
 
 async function handleRequest(env: Env): Promise<Response> {
   try {

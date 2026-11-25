@@ -65,6 +65,7 @@ function resolveSource(
 export async function ingestNews(env: Env): Promise<IngestResult> {
   const sources = getFeeds(env);
   const found = await fetchRssItems(sources);
+  console.log(`Fetched ${found.length} feed item(s) total`);
 
   const items: NewItem[] = found.map((item) => {
     const source = resolveSource(item.source, item.url, sources);
@@ -103,7 +104,7 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
 
   await setLastSync(env.DB, new Date().toISOString());
 
-  console.log(`Stored ${inserted} new item(s) from RSS feeds`);
+  console.log(`Saved ${inserted} new item(s) to DB`);
 
   return {
     inserted,

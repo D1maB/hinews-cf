@@ -33,3 +33,20 @@ test('truncateToSentence cuts at the last sentence boundary', () => {
   assert.equal(truncateToSentence('Short text.', 30), 'Short text.');
   assert.equal(truncateToSentence('', 30), '');
 });
+
+test('rewrites feed URLs to local files when LOCAL_FEEDS_URL is set', () => {
+  const feeds = getFeeds({
+    FEEDS: JSON.stringify([
+      { id: 'example', name: 'Example', url: 'https://example.com/feed' },
+    ]),
+    LOCAL_FEEDS_URL: 'http://feeds:8080/',
+  });
+
+  assert.deepEqual(feeds, [
+    {
+      id: 'example',
+      name: 'Example',
+      url: 'http://feeds:8080/example.xml',
+    },
+  ]);
+});

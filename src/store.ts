@@ -144,3 +144,10 @@ export async function deletePublished(db: Database): Promise<number> {
   const result = await db.prepare(DELETE_PUBLISHED).run();
   return result.meta.changes ?? 0;
 }
+
+/** Sort stored items by scheduled publication time. */
+export function sortByScheduled(items: StoredItem[]): StoredItem[] {
+  return [...items].sort((a, b) =>
+    (a.scheduled_at ?? '').localeCompare(b.scheduled_at ?? ''),
+  );
+}

@@ -63,6 +63,7 @@ export interface Database {
 export interface Env {
   DB: Database;
   FEEDS?: string;
+  LOCAL_FEEDS_URL?: string;
   TELEGRAM_ENABLED?: string | boolean;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;

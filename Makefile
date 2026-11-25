@@ -1,4 +1,4 @@
-.PHONY: up down logs build test typecheck deploy query migrate help qa wipe cron re
+.PHONY: up down logs build test typecheck deploy query migrate help qa wipe cron re download-feeds df
 
 # The standalone v1 CLI is the supported local runtime. CI overrides this with
 # `DOCKER_COMPOSE="docker compose"` because GitHub runners ship only Compose v2.
@@ -55,6 +55,12 @@ migrate:
 wipe:
 	$(DOCKER_COMPOSE) run --rm app npx wrangler d1 execute DB --local --config wrangler.dev.toml --command "DELETE FROM items"
 
+download-feeds:
+	mkdir -p feeds
+	$(DOCKER_COMPOSE) run --rm tools npx tsx scripts/download-feeds.ts
+
+df: download-feeds
+
 help:
 	@echo "hinews-cf - local development commands"
 	@echo ""
@@ -71,5 +77,7 @@ help:
 	@echo "  make migrate    - apply D1 migrations to the local database"
 	@echo "  make wipe       - wipe all stored items from the local database"
 	@echo "  make qa         - run lint, format check, and tests"
+	@echo "  make download-feeds - download RSS feeds into ./feeds for local dev"
+	@echo "  make df         - alias for download-feeds"
 	@echo "  make help       - show this help"
 

@@ -45,15 +45,23 @@ Local worker configuration comes from the repository-root `.env` file; nothing n
 
 The app runs entirely in Docker, so you do not need Node.js installed on the host.
 
-1. Build the image and start the worker in the background:
+1. Download feeds for local development (served by the `feeds` docker-compose service):
+
+   ```bash
+   make download-feeds
+   ```
+
+2. Build the image and start the worker in the background:
 
    ```bash
    docker-compose up -d --build app
    ```
 
-   Startup applies the D1 migrations to the local database.
+   Startup applies the D1 migrations to the local database. Local dev uses downloaded feeds
+   from `./feeds` via `LOCAL_FEEDS_URL` (defaults to `http://feeds:8080` in docker-compose);
+   production fetches feeds from the internet.
 
-2. Populate the database with the scheduled ingestion handler:
+3. Populate the database with the scheduled ingestion handler:
 
    ```bash
    make cron
@@ -62,16 +70,16 @@ The app runs entirely in Docker, so you do not need Node.js installed on the hos
    This fetches the configured RSS feeds once and stores newly found articles. The page only
    renders stored rows; it does not fetch feeds on request.
 
-3. Open <http://localhost:8787>. The page lists every stored headline from all
+4. Open <http://localhost:8787>. The page lists every stored headline from all
    configured sources, ordered by scheduled time.
 
-4. Follow the worker logs when needed:
+5. Follow the worker logs when needed:
 
    ```bash
    docker-compose logs -f app
    ```
 
-5. Stop and remove the containers:
+6. Stop and remove the containers:
 
    ```bash
    docker-compose down
@@ -85,6 +93,7 @@ make up           # build and start the worker (http://localhost:8787)
 make down         # stop and remove containers
 make logs         # follow worker logs
 make build        # rebuild the app image
+make download-feeds # download RSS feeds into ./feeds for local dev
 make cron         # run the cron ingestion handler locally
 make re           # recreate the app container to resync environment variables
 make query        # run a SQL query against local D1 (e.g. make query DB_QUERY="SELECT COUNT(*) FROM items")
