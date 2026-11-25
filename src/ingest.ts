@@ -182,8 +182,17 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
       );
 
       const embeddingConfig = getEmbeddingConfig(env);
+      console.log(
+        `Embedding dedupe: ${embeddingConfig.enabled ? 'enabled' : 'disabled'}`,
+      );
       if (embeddingConfig.enabled && prepared.length > 0) {
+        console.log(
+          `Embedding dedupe config: provider=${embeddingConfig.provider} model=${embeddingConfig.model} threshold=${embeddingConfig.threshold}`,
+        );
         const stored = await listStoredEmbeddings(env.DB);
+        console.log(
+          `Loaded ${stored.length} stored embedding(s) for duplicate check`,
+        );
         const knownEmbeddings = stored
           .map((row) => ({
             url: row.url,
@@ -195,7 +204,11 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
           );
 
         const uniquePrepared: typeof prepared = [];
-        for (const item of prepared) {
+        let duplicateCount = 0;
+        for (const [index, item] of prepared.entries()) {
+          console.log(
+            `Embedding item ${index + 1}/${prepared.length}: ${item.url}`,
+          );
           const text = `${item.title}\n${item.description ?? ''}`.trim();
           const embedding = await embedText(embeddingConfig, text);
           if (!embedding) {
@@ -210,6 +223,7 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
               embeddingConfig.threshold,
           );
           if (duplicate) {
+            duplicateCount += 1;
             console.log(
               `Skipped duplicate by embedding (${duplicate.url}): ${item.url}`,
             );
@@ -222,6 +236,10 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
             embedding: JSON.stringify(embedding),
           });
         }
+        console.log(`Embedding dedupe duplicates: ${duplicateCount}`);
+        console.log(
+          `Embedding dedupe kept ${uniquePrepared.length}/${prepared.length} item(s)`,
+        );
         prepared = uniquePrepared;
       }
 
