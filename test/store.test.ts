@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { buildScheduledAt, deletePublished, saveItems } from '../src/store.ts';
+import {
+  buildScheduledAt,
+  deletePublished,
+  listNewItems,
+  saveItems,
+  scheduleScoredItems,
+} from '../src/store.ts';
 import { createFakeDb } from './fake-db.ts';
 import type { NewItem } from '../src/types.ts';
 
@@ -27,7 +33,7 @@ test('saveItems persists the description and target flags', async () => {
   assert.equal(inserted, 1);
   const row = db.rows.get('https://example.com/kitguru');
   assert.equal(row?.description, 'A short excerpt.');
-  assert.equal(row?.status, 'scheduled');
+  assert.equal(row?.status, 'new');
   assert.equal(row?.telegram_published, 0);
   assert.equal(row?.bsky_published, 0);
 });
@@ -56,7 +62,7 @@ test('saveItems skips URLs that already exist in the database', async () => {
       title: 'Old story',
       url: 'https://example.com/kitguru',
       published_at: '2024-01-01T00:00:00.000Z',
-      status: 'scheduled',
+      status: 'new',
       score: 80,
     },
   ]);
@@ -105,7 +111,7 @@ test('deletes only published items', async (t) => {
       title: 'Scheduled story',
       url: 'https://example.com/scheduled',
       published_at: '2024-01-02T00:00:00.000Z',
-      status: 'scheduled',
+      status: 'new',
       scheduled_at: '2026-11-03T12:00:00.000Z',
       score: 70,
     },
@@ -140,7 +146,7 @@ test('deletePublished returns 0 when no published items', async (t) => {
       title: 'Scheduled story',
       url: 'https://example.com/scheduled',
       published_at: '2024-01-02T00:00:00.000Z',
-      status: 'scheduled',
+      status: 'new',
       scheduled_at: '2026-11-03T12:00:00.000Z',
       score: 70,
     },
@@ -150,4 +156,46 @@ test('deletePublished returns 0 when no published items', async (t) => {
 
   assert.equal(deleted, 0);
   assert.equal(db.rows.size, 1);
+});
+
+test('listNewItems returns only new items and scheduleScoredItems schedules them', async () => {
+  const db = createFakeDb([
+    {
+      feed_id: 'a',
+      feed_name: 'A',
+      title: 'New story',
+      url: 'https://example.com/new',
+      published_at: '2026-11-01T00:00:00.000Z',
+      status: 'new',
+      score: 0,
+    },
+    {
+      feed_id: 'a',
+      feed_name: 'A',
+      title: 'Scheduled story',
+      url: 'https://example.com/scheduled',
+      published_at: '2026-11-01T00:00:00.000Z',
+      status: 'scheduled',
+      scheduled_at: '2026-11-02T00:00:00.000Z',
+      score: 50,
+    },
+  ]);
+
+  const newItems = await listNewItems(db);
+  assert.equal(newItems.length, 1);
+  assert.equal(newItems[0]?.url, 'https://example.com/new');
+
+  const updated = await scheduleScoredItems(db, [
+    {
+      url: 'https://example.com/new',
+      score: 88,
+      scheduledAt: '2026-11-03T00:00:00.000Z',
+    },
+  ]);
+
+  assert.equal(updated, 1);
+  const row = db.rows.get('https://example.com/new');
+  assert.equal(row?.status, 'scheduled');
+  assert.equal(row?.score, 88);
+  assert.equal(row?.scheduled_at, '2026-11-03T00:00:00.000Z');
 });

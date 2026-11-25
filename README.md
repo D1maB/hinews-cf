@@ -36,6 +36,11 @@ cp .env.example .env
 | `TELEGRAM_CHAT_ID`      | Telegram chat/channel id used to publish               |
 | `LOCAL_FEEDS_URL`       | Base URL for downloaded local feeds in development     |
 | `FEED_ITEM_LIMIT`       | Max items to keep from each feed (default `10`)        |
+| `AI_PROVIDER`           | AI scoring provider: `google` (default) or `openrouter` |
+| `GEMINI_API_KEY`        | Gemini API key used when `AI_PROVIDER=google`          |
+| `GEMINI_MODEL`          | Gemini model used for scoring                          |
+| `OPENROUTER_API_KEY`    | OpenRouter API key used when `AI_PROVIDER=openrouter`  |
+| `OPENROUTER_MODEL`      | OpenRouter model used for scoring                      |
 
 `.env` is ignored by Git and Docker. `docker-compose` loads it automatically when run
 from the repository root. Commit only `.env.example`.
@@ -114,7 +119,7 @@ make help         # show the list of available targets
 Source files are mounted into the container, so edits reload automatically. `.env` is not
 needed for local development; it is only required for deployment.
 
-## Sources and RSS parsing
+## Sources, parsing, and AI scoring
 
 The source list lives in `sites.json` and defaults to the built-in PC hardware and gaming
 sources, but can be overridden by setting the `FEEDS` environment variable to a JSON array of
@@ -122,9 +127,11 @@ sources, but can be overridden by setting the `FEEDS` environment variable to a 
 
 On every ingestion the worker fetches each configured feed over HTTP and parses RSS/XML and
 JSON feed entries using libraries (`fast-xml-parser` for XML, built-in JSON parsing for JSON
-feeds). Each item is normalized into a news item (title, direct link, description, publish
-date) with `score` set to `0` for now. Feeds that fail to respond are skipped, and the rest of
-the pipeline (duplicate skipping, sponsored filtering, scheduling, publishing) continues.
+feeds). New items are saved with status `new`, then scored by AI based on title interest for
+PC users and gamers (1-100) using the configured provider (`AI_PROVIDER`: `google` or
+`openrouter`), then assigned `scheduled_at` and moved to `scheduled` status. Feeds that fail to
+respond are skipped, and the rest of the pipeline (duplicate skipping, sponsored filtering,
+publishing) continues.
 
 ## Database
 

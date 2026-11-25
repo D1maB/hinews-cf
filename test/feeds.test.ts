@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { DEFAULT_FEEDS, getFeeds, truncateToSentence } from '../src/feeds.ts';
+import {
+  DEFAULT_FEEDS,
+  getFeeds,
+  isUrlValid,
+  truncateToSentence,
+} from '../src/feeds.ts';
 
 test('returns the built-in sources when no override is configured', () => {
   assert.deepEqual(getFeeds({}), DEFAULT_FEEDS);
@@ -49,4 +54,18 @@ test('rewrites feed URLs to local files when LOCAL_FEEDS_URL is set', () => {
       url: 'http://feeds:8080/example.xml',
     },
   ]);
+});
+
+test('isUrlValid falls back to GET when HEAD is not allowed', async (t) => {
+  const calls: string[] = [];
+  t.mock.method(globalThis, 'fetch', async (_input: unknown, init?: RequestInit) => {
+    calls.push(String(init?.method ?? 'GET'));
+    if (init?.method === 'HEAD') {
+      return new Response('', { status: 405 });
+    }
+    return new Response('', { status: 200 });
+  });
+
+  assert.equal(await isUrlValid('https://example.com/story'), true);
+  assert.deepEqual(calls, ['HEAD', 'GET']);
 });

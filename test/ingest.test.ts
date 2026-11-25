@@ -149,3 +149,57 @@ test('skips sponsored results', async (t) => {
   assert.equal(inserted, 1);
   assert.equal(db.rows.size, 1);
 });
+
+test('scores new items with configured AI provider before scheduling', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  t.mock.method(console, 'error', () => {});
+  t.mock.method(globalThis, 'fetch', async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes('generativelanguage.googleapis.com')) {
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify([
+                      {
+                        url: 'https://wccftech.com/reviews/rtx-5090',
+                        score: 95,
+                      },
+                      {
+                        url: 'https://www.techpowerup.com/review/ryzen-9950x',
+                        score: 77,
+                      },
+                    ]),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    }
+    return new Response(RSS_XML, { status: 200 });
+  });
+  const db = createFakeDb();
+
+  await ingestNews({
+    DB: db,
+    AI_PROVIDER: 'google',
+    GEMINI_API_KEY: 'k',
+    GEMINI_MODEL: 'gemini-2.5-flash',
+  });
+
+  assert.equal(db.rows.get('https://wccftech.com/reviews/rtx-5090')?.score, 95);
+  assert.equal(
+    db.rows.get('https://www.techpowerup.com/review/ryzen-9950x')?.score,
+    77,
+  );
+  assert.equal(
+    db.rows.get('https://wccftech.com/reviews/rtx-5090')?.status,
+    'scheduled',
+  );
+});

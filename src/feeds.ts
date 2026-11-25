@@ -83,15 +83,25 @@ export async function isUrlValid(
   urlString: string,
   timeoutMs = 8000,
 ): Promise<boolean> {
-  try {
+  async function check(method: 'HEAD' | 'GET'): Promise<Response> {
     const abort = new AbortController();
     const timeoutId = setTimeout(() => abort.abort(), timeoutMs);
-    const response = await fetch(urlString, {
-      method: 'HEAD',
-      signal: abort.signal,
-      headers: { 'User-Agent': 'hinews-cf/1.0' },
-    });
-    clearTimeout(timeoutId);
+    try {
+      return await fetch(urlString, {
+        method,
+        signal: abort.signal,
+        headers: { 'User-Agent': 'hinews-cf/1.0' },
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  try {
+    let response = await check('HEAD');
+    if (response.status === 405 || response.status === 501) {
+      response = await check('GET');
+    }
     return response.ok;
   } catch {
     return false;

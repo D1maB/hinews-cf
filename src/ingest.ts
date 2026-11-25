@@ -1,10 +1,13 @@
 import { getFeeds, isUrlValid } from './feeds.js';
 import { fetchRssItems, parseFeedItemLimit } from './rss.js';
+import { scoreItems } from './score.js';
 import {
-  saveItems,
-  setLastSync,
-  getLastScheduledAt,
   buildScheduledAt,
+  getLastScheduledAt,
+  listNewItems,
+  saveItems,
+  scheduleScoredItems,
+  setLastSync,
 } from './store.js';
 import type { Env, FeedConfig, NewItem } from './types.js';
 
@@ -61,8 +64,25 @@ function resolveSource(
   return { id: slugify(fallbackName), name: fallbackName, url };
 }
 
+function logAppEnv(env: Env): void {
+  const safeEnv = {
+    LOCAL_FEEDS_URL: env.LOCAL_FEEDS_URL?.trim() || '',
+    FEED_ITEM_LIMIT: env.FEED_ITEM_LIMIT?.trim() || '',
+    FEEDS: env.FEEDS ? '[configured]' : '',
+    TELEGRAM_ENABLED: String(env.TELEGRAM_ENABLED ?? ''),
+    TELEGRAM_BOT_TOKEN: env.TELEGRAM_BOT_TOKEN ? '[set]' : '',
+    TELEGRAM_CHAT_ID: env.TELEGRAM_CHAT_ID ? '[set]' : '',
+    BSKY_ENABLED: String(env.BSKY_ENABLED ?? ''),
+    BSKY_HANDLE: env.BSKY_HANDLE ? '[set]' : '',
+    BSKY_APP_PASSWORD: env.BSKY_APP_PASSWORD ? '[set]' : '',
+    DB: env.DB ? '[bound]' : '',
+  };
+  console.log('App env:', safeEnv);
+}
+
 /** Fetch the latest news from RSS feeds and store new headlines. */
 export async function ingestNews(env: Env): Promise<IngestResult> {
+  logAppEnv(env);
   const sources = getFeeds(env);
   const feedItemLimit = parseFeedItemLimit(env.FEED_ITEM_LIMIT);
   console.log(
@@ -98,25 +118,33 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
   );
   const validCandidates = candidates.filter((_, index) => urlValidity[index]);
 
-  const lastScheduledAt = await getLastScheduledAt(env.DB);
-  const baseTime = lastScheduledAt
-    ? new Date(lastScheduledAt).getTime()
-    : Date.now();
-  const prepared = validCandidates.map((item) => ({
-    ...item,
-    scheduledAt: buildScheduledAt(baseTime, validCandidates.length),
-  }));
+  const inserted = await saveItems(env.DB, validCandidates);
+  console.log(`Saved ${inserted} new item(s) to DB`);
 
-  const inserted = await saveItems(env.DB, prepared);
+  const newItems = await listNewItems(env.DB);
+  if (newItems.length > 0) {
+    const scores = await scoreItems(env, newItems);
+    const lastScheduledAt = await getLastScheduledAt(env.DB);
+    const baseTime = lastScheduledAt
+      ? new Date(lastScheduledAt).getTime()
+      : Date.now();
+
+    const updates = newItems.map((item) => ({
+      url: item.url,
+      score: scores.get(item.url) ?? 0,
+      scheduledAt: buildScheduledAt(baseTime, newItems.length),
+    }));
+
+    const scheduled = await scheduleScoredItems(env.DB, updates);
+    console.log(`Scored and scheduled ${scheduled} item(s)`);
+  }
 
   await setLastSync(env.DB, new Date().toISOString());
-
-  console.log(`Saved ${inserted} new item(s) to DB`);
 
   return {
     inserted,
     sources,
-    items: prepared.map((item) => ({
+    items: validCandidates.map((item) => ({
       feed_id: item.feedId,
       feed_name: item.feedName,
       title: item.title,

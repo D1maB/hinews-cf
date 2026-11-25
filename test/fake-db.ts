@@ -79,6 +79,9 @@ class FakeStatement implements DbStatement {
     }
 
     let rows = [...this.database.rows.values()];
+    if (sql.includes("status = 'new'")) {
+      rows = rows.filter((row) => row.status === 'new');
+    }
     const results = rows.sort(
       (left, right) =>
         String(left.feed_id ?? '').localeCompare(String(right.feed_id ?? '')) ||
@@ -137,6 +140,24 @@ class FakeStatement implements DbStatement {
       throw new Error(`Unexpected SQL: ${this.sql}`);
     }
 
+    if (
+      sql.includes('update') &&
+      sql.includes('score = ?') &&
+      sql.includes("status = 'scheduled'") &&
+      sql.includes("status = 'new'")
+    ) {
+      const [score, scheduledAt, url] = this.args;
+      const row = this.database.rows.get(String(url));
+      if (!row || row.status !== 'new') {
+        return { meta: { changes: 0 } };
+      }
+      row.score = typeof score === 'number' ? score : Number(score);
+      row.scheduled_at = scheduledAt == null ? null : String(scheduledAt);
+      row.status = 'scheduled';
+      this.database.writes += 1;
+      return { meta: { changes: 1 } };
+    }
+
     if (sql.includes('update') && sql.includes("status = 'published'")) {
       const url = String(this.args[0]);
       const row = this.database.rows.get(url);
@@ -159,6 +180,7 @@ class FakeStatement implements DbStatement {
       url,
       publishedAt,
       score,
+      status,
       scheduledAt,
       description,
     ] = this.args;
@@ -188,7 +210,7 @@ class FakeStatement implements DbStatement {
       url: rowUrl,
       published_at: publishedAt == null ? null : String(publishedAt),
       score: typeof score === 'number' ? score : null,
-      status: 'scheduled',
+      status: String(status ?? 'new'),
       scheduled_at: scheduledAt == null ? null : String(scheduledAt),
       description: description == null ? null : String(description),
       telegram_published: 0,

@@ -120,6 +120,8 @@ All local infrastructure runs in Docker on Alpine:
 - Local worker configuration comes solely from the repository-root `.env` file (do not
   use `.dev.vars`).
 - Production secrets are set with `wrangler secret put` and read from `env`.
+- AI scoring credentials (`GEMINI_API_KEY` or `OPENROUTER_API_KEY`) are configured via
+  env/secrets; never hardcode them.
 
 ## Local development
 
@@ -138,8 +140,9 @@ Common tasks are also available as Makefile targets that forward to the Compose 
 above: `make up`, `make down`, `make logs`, `make build`, `make test`,
 `make typecheck`, `make qa`, `make re`, and `make deploy`.
 
-## News source
+## News source and scoring
 
 Ingestion fetches and parses the configured RSS feeds listed in `sites.json` (or
 overridden by `FEEDS`). Use RSS/JSON feed parsing libraries rather than hand-rolled
-parsing where practical.
+parsing where practical. New items are saved as `new`, scored by the configured AI
+provider by title (1-100 for PC users/gamers interest), then scheduled.

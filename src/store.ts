@@ -4,12 +4,19 @@ const SCHEDULE_WINDOW_MINUTES = 12 * 60;
 
 const INSERT_ITEM = `
   INSERT OR IGNORE INTO items (feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description)
-  VALUES (?, ?, ?, ?, ?, ?, 'scheduled', ?, ?)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
 const LIST_ITEMS = `
   SELECT feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description, telegram_published, bsky_published
   FROM items
+  ORDER BY id
+`;
+
+const LIST_NEW_ITEMS = `
+  SELECT feed_id, feed_name, title, url, published_at, score, status, scheduled_at, description, telegram_published, bsky_published
+  FROM items
+  WHERE status = 'new'
   ORDER BY id
 `;
 
@@ -27,6 +34,12 @@ const MARK_TARGET_PUBLISHED: Record<PublishTarget, string> = {
   telegram: `UPDATE items SET telegram_published = 1 WHERE url = ?`,
   bluesky: `UPDATE items SET bsky_published = 1 WHERE url = ?`,
 };
+
+const SCORE_AND_SCHEDULE_ITEM = `
+  UPDATE items
+  SET score = ?, scheduled_at = ?, status = 'scheduled'
+  WHERE url = ? AND status = 'new'
+`;
 
 /**
  * Store new items, skipping URLs that already exist in the database.
@@ -49,8 +62,10 @@ export async function saveItems(
 
   if (newItems.length === 0) return 0;
 
-  const statements = newItems.map((item) =>
-    db
+  const statements = newItems.map((item) => {
+    const scheduledAt = item.scheduledAt ?? null;
+    const status = scheduledAt ? 'scheduled' : 'new';
+    return db
       .prepare(INSERT_ITEM)
       .bind(
         item.feedId,
@@ -59,10 +74,11 @@ export async function saveItems(
         item.url,
         item.publishedAt,
         item.score,
-        item.scheduledAt ?? null,
+        status,
+        scheduledAt,
         item.description ?? null,
-      ),
-  );
+      );
+  });
 
   const results2 = await db.batch(statements);
   return results2.reduce(
@@ -73,6 +89,11 @@ export async function saveItems(
 
 export async function listItems(db: Database): Promise<StoredItem[]> {
   const { results } = await db.prepare(LIST_ITEMS).all<StoredItem>();
+  return results;
+}
+
+export async function listNewItems(db: Database): Promise<StoredItem[]> {
+  const { results } = await db.prepare(LIST_NEW_ITEMS).all<StoredItem>();
   return results;
 }
 
@@ -129,6 +150,31 @@ export async function markTargetPublished(
     .bind(url)
     .run();
   return result.meta.changes ?? 0;
+}
+
+export interface ScoredScheduleUpdate {
+  url: string;
+  score: number;
+  scheduledAt: string;
+}
+
+/** Save AI scores and move new items into the scheduled state. */
+export async function scheduleScoredItems(
+  db: Database,
+  updates: ScoredScheduleUpdate[],
+): Promise<number> {
+  if (updates.length === 0) return 0;
+
+  const statements = updates.map((update) =>
+    db
+      .prepare(SCORE_AND_SCHEDULE_ITEM)
+      .bind(update.score, update.scheduledAt, update.url),
+  );
+  const results = await db.batch(statements);
+  return results.reduce(
+    (total, result) => total + (result.meta.changes ?? 0),
+    0,
+  );
 }
 
 /** Spread `itemCount` items randomly across the next 12-hour window. */

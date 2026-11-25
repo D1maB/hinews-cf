@@ -65,6 +65,11 @@ export interface Env {
   FEEDS?: string;
   LOCAL_FEEDS_URL?: string;
   FEED_ITEM_LIMIT?: string;
+  AI_PROVIDER?: string;
+  GEMINI_API_KEY?: string;
+  GEMINI_MODEL?: string;
+  OPENROUTER_API_KEY?: string;
+  OPENROUTER_MODEL?: string;
   TELEGRAM_ENABLED?: string | boolean;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
