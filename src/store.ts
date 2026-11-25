@@ -22,6 +22,11 @@ const LIST_NEW_ITEMS = `
 
 const SELECT_URLS = `SELECT url FROM items`;
 
+export async function getExistingUrls(db: Database): Promise<Set<string>> {
+  const { results } = await db.prepare(SELECT_URLS).all<{ url: string }>();
+  return new Set(results.map((row) => row.url));
+}
+
 const GET_META = `SELECT value FROM meta WHERE key = ?`;
 const SET_META = `INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`;
 

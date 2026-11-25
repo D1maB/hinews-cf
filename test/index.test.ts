@@ -26,15 +26,36 @@ const RSS_XML = `<?xml version="1.0" encoding="UTF-8"?>
 </rss>`;
 
 function mockRssFetch(t: TestContext, body = RSS_XML): void {
-  t.mock.method(
-    globalThis,
-    'fetch',
-    async () =>
-      new Response(body, {
-        status: 200,
-        headers: { 'content-type': 'application/rss+xml' },
-      }),
-  );
+  t.mock.method(globalThis, 'fetch', async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes('generativelanguage.googleapis.com')) {
+      const urls = [...body.matchAll(/<link>([^<]+)<\/link>/g)].map(
+        (m) => m[1],
+      );
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify(
+                      urls.map((u) => ({ url: u, score: 1 })),
+                    ),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    }
+    return new Response(body, {
+      status: 200,
+      headers: { 'content-type': 'application/rss+xml' },
+    });
+  });
 }
 
 function runScheduled(env: Env, cron: string): Promise<unknown> {
@@ -126,7 +147,15 @@ test('scheduled runs store fresh items from RSS feeds', async (t) => {
   const db = createFakeDb();
   mockRssFetch(t);
 
-  await runScheduled({ DB: db }, '0 */12 * * *');
+  await runScheduled(
+    {
+      DB: db,
+      AI_PROVIDER: 'google',
+      GEMINI_API_KEY: 'test-key',
+      GEMINI_MODEL: 'gemini-2.5-flash',
+    },
+    '0 */12 * * *',
+  );
 
   assert.equal(db.rows.size, 2);
 });
@@ -147,7 +176,15 @@ test('scheduled runs append fresh items without clearing existing ones', async (
   ]);
   mockRssFetch(t);
 
-  await runScheduled({ DB: db }, '0 */12 * * *');
+  await runScheduled(
+    {
+      DB: db,
+      AI_PROVIDER: 'google',
+      GEMINI_API_KEY: 'test-key',
+      GEMINI_MODEL: 'gemini-2.5-flash',
+    },
+    '0 */12 * * *',
+  );
 
   assert.equal(db.rows.size, 3);
 });

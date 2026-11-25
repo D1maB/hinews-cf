@@ -3,6 +3,7 @@ import { fetchRssItems, parseFeedItemLimit } from './rss.js';
 import { scoreItems } from './score.js';
 import {
   buildScheduledAt,
+  getExistingUrls,
   getLastScheduledAt,
   listNewItems,
   saveItems,
@@ -112,31 +113,67 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
     return !SPONSORED_REGEX.test(textToCheck);
   });
 
+  const existingUrls = await getExistingUrls(env.DB);
+  const newCandidates = candidates.filter((item) => !existingUrls.has(item.url));
+  console.log(
+    `Skipped ${candidates.length - newCandidates.length} already-stored item(s)`,
+  );
+
   // Filter out items with inaccessible URLs (e.g. 404 pages).
   const urlValidity = await Promise.all(
-    candidates.map((item) => isUrlValid(item.url)),
+    newCandidates.map((item) => isUrlValid(item.url)),
   );
-  const validCandidates = candidates.filter((_, index) => urlValidity[index]);
+  const freshCandidates = newCandidates.filter(
+    (_, index) => urlValidity[index],
+  );
 
-  const inserted = await saveItems(env.DB, validCandidates);
-  console.log(`Saved ${inserted} new item(s) to DB`);
+  let prepared: Array<NewItem & { scheduledAt: string }> = [];
+  let inserted = 0;
 
-  const newItems = await listNewItems(env.DB);
-  if (newItems.length > 0) {
-    const scores = await scoreItems(env, newItems);
-    const lastScheduledAt = await getLastScheduledAt(env.DB);
-    const baseTime = lastScheduledAt
-      ? new Date(lastScheduledAt).getTime()
-      : Date.now();
+  if (freshCandidates.length > 0) {
+    try {
+      const scores = await scoreItems(
+        env,
+        freshCandidates.map((item) => ({ title: item.title, url: item.url })),
+      );
+      const lastScheduledAt = await getLastScheduledAt(env.DB);
+      const baseTime = lastScheduledAt
+        ? new Date(lastScheduledAt).getTime()
+        : Date.now();
 
-    const updates = newItems.map((item) => ({
-      url: item.url,
-      score: scores.get(item.url) ?? 0,
-      scheduledAt: buildScheduledAt(baseTime, newItems.length),
-    }));
+      prepared = freshCandidates.map((item) => ({
+        ...item,
+        score: scores.get(item.url) ?? 0,
+        scheduledAt: buildScheduledAt(baseTime, freshCandidates.length),
+      }));
 
-    const scheduled = await scheduleScoredItems(env.DB, updates);
-    console.log(`Scored and scheduled ${scheduled} item(s)`);
+      inserted = await saveItems(env.DB, prepared);
+      console.log(`Saved ${inserted} new item(s) to DB`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Can't score items, skipping save: ${message}`);
+    }
+  }
+
+  const pendingNewItems = await listNewItems(env.DB);
+  if (pendingNewItems.length > 0) {
+    try {
+      const scores = await scoreItems(env, pendingNewItems);
+      const lastScheduledAt = await getLastScheduledAt(env.DB);
+      const baseTime = lastScheduledAt
+        ? new Date(lastScheduledAt).getTime()
+        : Date.now();
+      const updates = pendingNewItems.map((item) => ({
+        url: item.url,
+        score: scores.get(item.url) ?? 0,
+        scheduledAt: buildScheduledAt(baseTime, pendingNewItems.length),
+      }));
+      const scheduled = await scheduleScoredItems(env.DB, updates);
+      console.log(`Scored and scheduled ${scheduled} pending item(s)`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Can't score pending items: ${message}`);
+    }
   }
 
   await setLastSync(env.DB, new Date().toISOString());
@@ -144,7 +181,7 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
   return {
     inserted,
     sources,
-    items: validCandidates.map((item) => ({
+    items: prepared.map((item) => ({
       feed_id: item.feedId,
       feed_name: item.feedName,
       title: item.title,

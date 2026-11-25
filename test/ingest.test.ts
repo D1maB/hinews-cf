@@ -25,22 +25,48 @@ const RSS_XML = `<?xml version="1.0" encoding="UTF-8"?>
 </rss>`;
 
 function mockRssFetch(t: TestContext, body = RSS_XML, status = 200): void {
-  t.mock.method(
-    globalThis,
-    'fetch',
-    async () =>
-      new Response(body, {
-        status,
-        headers: { 'content-type': 'application/rss+xml' },
-      }),
-  );
+  t.mock.method(globalThis, 'fetch', async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes('generativelanguage.googleapis.com')) {
+      const urls = [...body.matchAll(/<link>([^<]+)<\/link>/g)].map(
+        (m) => m[1],
+      );
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify(
+                      urls.map((u) => ({ url: u, score: 1 })),
+                    ),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    }
+    return new Response(body, {
+      status,
+      headers: { 'content-type': 'application/rss+xml' },
+    });
+  });
 }
 
 function envWith(db: Env['DB']): Env {
-  return { DB: db };
+  return {
+    DB: db,
+    AI_PROVIDER: 'google',
+    GEMINI_API_KEY: 'test-key',
+    GEMINI_MODEL: 'gemini-2.5-flash',
+  };
 }
 
-test('stores RSS feed items with score 0', async (t) => {
+test('stores RSS feed items with AI-scored values', async (t) => {
   t.mock.method(console, 'log', () => {});
   mockRssFetch(t);
   const db = createFakeDb();
@@ -53,7 +79,7 @@ test('stores RSS feed items with score 0', async (t) => {
   const row = db.rows.get('https://wccftech.com/reviews/rtx-5090');
   assert.equal(row?.feed_id, 'wccftech');
   assert.equal(row?.feed_name, 'Wccftech');
-  assert.equal(row?.score, 0);
+  assert.equal(row?.score, 1);
   assert.equal(row?.description, 'A deep dive into the new flagship GPU.');
   assert.equal(row?.status, 'scheduled');
 });
@@ -202,4 +228,31 @@ test('scores new items with configured AI provider before scheduling', async (t)
     db.rows.get('https://wccftech.com/reviews/rtx-5090')?.status,
     'scheduled',
   );
+});
+
+test('does not save items when AI scoring fails', async (t) => {
+  const errors: string[] = [];
+  t.mock.method(console, 'log', () => {});
+  t.mock.method(console, 'error', (...args: unknown[]) => {
+    errors.push(args.map(String).join(' '));
+  });
+  t.mock.method(globalThis, 'fetch', async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes('generativelanguage.googleapis.com')) {
+      return new Response('unavailable', { status: 503 });
+    }
+    return new Response(RSS_XML, { status: 200 });
+  });
+  const db = createFakeDb();
+
+  const { inserted } = await ingestNews({
+    DB: db,
+    AI_PROVIDER: 'google',
+    GEMINI_API_KEY: 'k',
+    GEMINI_MODEL: 'gemini-2.5-flash',
+  });
+
+  assert.equal(inserted, 0);
+  assert.equal(db.rows.size, 0);
+  assert.ok(errors.some((line) => line.includes("Can't score items")));
 });

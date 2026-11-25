@@ -61,10 +61,10 @@ test('scoreItems returns scores from Gemini response', async (t) => {
   assert.equal(scores.get('https://example.com/b'), 42);
 });
 
-test('scoreItems returns empty map when AI is not configured', async (t) => {
-  t.mock.method(console, 'error', () => {});
-  const scores = await scoreItems({} as never, [
-    { title: 'A', url: 'https://example.com/a' },
-  ]);
-  assert.equal(scores.size, 0);
+test('scoreItems throws when AI is not configured', async () => {
+  await assert.rejects(
+    () =>
+      scoreItems({} as never, [{ title: 'A', url: 'https://example.com/a' }]),
+    /GEMINI_API_KEY/,
+  );
 });

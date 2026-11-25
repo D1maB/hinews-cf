@@ -238,28 +238,36 @@ export async function scoreItems(
   const scores = new Map<string, number>();
   if (items.length === 0) return scores;
 
-  let config: ScoreConfig;
-  try {
-    config = getScoreConfig(env);
-  } catch (error) {
-    console.error('AI scoring is not configured:', errorMessage(error));
-    return scores;
-  }
-
+  const config = getScoreConfig(env);
   console.log(
     `Scoring ${items.length} item(s) with ${config.provider}/${config.model}`,
   );
   const prompt = buildScorePrompt(items);
+
+  console.log('p:');
+  console.log(prompt);
+
   const text =
     config.provider === 'openrouter'
       ? await requestOpenRouter(config, prompt)
       : await requestGemini(config, prompt);
-  if (text === null) return scores;
+
+  if (text === null) {
+    throw new Error('AI scoring request failed');
+  }
+
+  console.log('t:');
+  console.log(text);
 
   const allowedUrls = new Set(items.map((item) => item.url));
   for (const result of parseScoreResults(text, allowedUrls)) {
     scores.set(result.url, result.score);
   }
+
+  if (scores.size === 0) {
+    throw new Error('AI scoring returned no usable scores');
+  }
+
   console.log(`Received ${scores.size} score(s) from AI`);
   return scores;
 }
