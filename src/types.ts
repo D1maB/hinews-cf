@@ -70,6 +70,7 @@ export interface Env {
   GEMINI_MODEL?: string;
   OPENROUTER_API_KEY?: string;
   OPENROUTER_MODEL?: string;
+  AI_SCORE_BATCH_SIZE?: string;
   TELEGRAM_ENABLED?: string | boolean;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;

@@ -3,8 +3,10 @@ import type { Env, StoredItem } from './types.js';
 const GEMINI_API_VERSION = 'v1beta';
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com';
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+const SCORE_REQUEST_TIMEOUT_MS = 30_000;
 
 export const DEFAULT_AI_PROVIDER: AiProvider = 'google';
+export const DEFAULT_AI_SCORE_BATCH_SIZE = 20;
 export const MIN_SCORE = 1;
 export const MAX_SCORE = 100;
 
@@ -16,6 +18,7 @@ export interface ScoreConfig {
   provider: AiProvider;
   model: string;
   apiKey: string;
+  batchSize: number;
 }
 
 export interface ScoreEnv {
@@ -24,6 +27,7 @@ export interface ScoreEnv {
   GEMINI_MODEL?: string;
   OPENROUTER_API_KEY?: string;
   OPENROUTER_MODEL?: string;
+  AI_SCORE_BATCH_SIZE?: string;
 }
 
 interface ScoreResult {
@@ -50,15 +54,26 @@ function parseProvider(value: string | undefined): AiProvider {
   return provider as AiProvider;
 }
 
+function parseBatchSize(value: string | undefined): number {
+  if (value == null || value.trim() === '') return DEFAULT_AI_SCORE_BATCH_SIZE;
+  const batchSize = Number(value);
+  if (!Number.isInteger(batchSize) || batchSize < 1) {
+    throw new Error('AI_SCORE_BATCH_SIZE must be a positive integer');
+  }
+  return batchSize;
+}
+
 /** Read AI scoring configuration from environment variables. */
 export function getScoreConfig(env: ScoreEnv = {}): ScoreConfig {
   const provider = parseProvider(env.AI_PROVIDER);
+  const batchSize = parseBatchSize(env.AI_SCORE_BATCH_SIZE);
 
   if (provider === 'openrouter') {
     return {
       provider,
       apiKey: requireValue(env.OPENROUTER_API_KEY, 'OPENROUTER_API_KEY'),
       model: requireValue(env.OPENROUTER_MODEL, 'OPENROUTER_MODEL'),
+      batchSize,
     };
   }
 
@@ -66,6 +81,7 @@ export function getScoreConfig(env: ScoreEnv = {}): ScoreConfig {
     provider,
     apiKey: requireValue(env.GEMINI_API_KEY, 'GEMINI_API_KEY'),
     model: requireValue(env.GEMINI_MODEL, 'GEMINI_MODEL'),
+    batchSize,
   };
 }
 
@@ -104,6 +120,7 @@ async function requestGemini(
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
         }),
+        signal: AbortSignal.timeout(SCORE_REQUEST_TIMEOUT_MS),
       },
     );
 
@@ -144,6 +161,7 @@ async function requestOpenRouter(
         model: config.model,
         messages: [{ role: 'user', content: prompt }],
       }),
+      signal: AbortSignal.timeout(SCORE_REQUEST_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -240,32 +258,37 @@ export async function scoreItems(
 
   const config = getScoreConfig(env);
   console.log(
-    `Scoring ${items.length} item(s) with ${config.provider}/${config.model}`,
+    `Scoring ${items.length} item(s) with ${config.provider}/${config.model} in batches of ${config.batchSize}`,
   );
-  const prompt = buildScorePrompt(items);
 
-  console.log('p:');
-  console.log(prompt);
+  for (let start = 0; start < items.length; start += config.batchSize) {
+    const batch = items.slice(start, start + config.batchSize);
+    const prompt = buildScorePrompt(batch);
+    const text =
+      config.provider === 'openrouter'
+        ? await requestOpenRouter(config, prompt)
+        : await requestGemini(config, prompt);
 
-  const text =
-    config.provider === 'openrouter'
-      ? await requestOpenRouter(config, prompt)
-      : await requestGemini(config, prompt);
+    if (text === null) {
+      throw new Error('AI scoring request failed');
+    }
 
-  if (text === null) {
-    throw new Error('AI scoring request failed');
-  }
+    const allowedUrls = new Set(batch.map((item) => item.url));
+    let batchScores = 0;
+    for (const result of parseScoreResults(text, allowedUrls)) {
+      if (!scores.has(result.url)) {
+        scores.set(result.url, result.score);
+        batchScores += 1;
+      }
+    }
 
-  console.log('t:');
-  console.log(text);
+    if (batchScores === 0) {
+      throw new Error('AI scoring returned no usable scores');
+    }
 
-  const allowedUrls = new Set(items.map((item) => item.url));
-  for (const result of parseScoreResults(text, allowedUrls)) {
-    scores.set(result.url, result.score);
-  }
-
-  if (scores.size === 0) {
-    throw new Error('AI scoring returned no usable scores');
+    console.log(
+      `Scored batch ${Math.floor(start / config.batchSize) + 1}: ${batchScores}/${batch.length} item(s)`,
+    );
   }
 
   console.log(`Received ${scores.size} score(s) from AI`);
