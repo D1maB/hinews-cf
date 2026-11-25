@@ -15,6 +15,7 @@ test('getScoreConfig reads provider config and supports gemini alias', () => {
       apiKey: 'g-key',
       model: 'gemini-2.5-flash',
       batchSize: 20,
+      timeoutMs: 30000,
     },
   );
 
@@ -30,6 +31,7 @@ test('getScoreConfig reads provider config and supports gemini alias', () => {
       apiKey: 'o-key',
       model: 'openai/gpt-4.1-mini',
       batchSize: 5,
+      timeoutMs: 30000,
     },
   );
 });

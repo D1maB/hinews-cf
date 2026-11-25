@@ -12,7 +12,8 @@ import {
 } from './store.js';
 import type { Env, FeedConfig, NewItem } from './types.js';
 
-const SPONSORED_REGEX = /\b(pr|ad|collab|sponsored)\b/i;
+const SPONSORED_REGEX =
+  /\b(pr|ad|ads|collab|sponsored|sponsor|deal|deals|promo|promotion|promotions|giveaway|affiliate|discount|sale)\b/i;
 
 export interface IngestResult {
   inserted: number;

@@ -256,3 +256,29 @@ test('does not save items when AI scoring fails', async (t) => {
   assert.equal(db.rows.size, 0);
   assert.ok(errors.some((line) => line.includes("Can't score items")));
 });
+
+test('skips deals and promo items', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+  <rss version="2.0"><channel>
+    <item>
+      <title>RTX 5090 review</title>
+      <link>https://wccftech.com/reviews/rtx-5090</link>
+      <description>A deep dive into the new flagship GPU.</description>
+      <pubDate>${new Date().toUTCString()}</pubDate>
+    </item>
+    <item>
+      <title>Best GPU deals this week</title>
+      <link>https://www.techpowerup.com/review/gpu-deals</link>
+      <description>Discounted cards.</description>
+      <pubDate>${new Date().toUTCString()}</pubDate>
+    </item>
+  </channel></rss>`;
+  mockRssFetch(t, xml);
+  const db = createFakeDb();
+
+  const { inserted } = await ingestNews(envWith(db));
+
+  assert.equal(inserted, 1);
+  assert.equal(db.rows.size, 1);
+});

@@ -42,6 +42,7 @@ cp .env.example .env
 | `OPENROUTER_API_KEY`    | OpenRouter API key used when `AI_PROVIDER=openrouter`   |
 | `OPENROUTER_MODEL`      | OpenRouter model used for scoring                       |
 | `AI_SCORE_BATCH_SIZE`   | Items per AI scoring request (default `20`)             |
+| `AI_SCORE_TIMEOUT_MS`   | Timeout per AI scoring request in ms (default `30000`)  |
 
 `.env` is ignored by Git and Docker. `docker-compose` loads it automatically when run
 from the repository root. Commit only `.env.example`.

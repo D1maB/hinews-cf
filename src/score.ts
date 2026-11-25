@@ -3,10 +3,10 @@ import type { Env, StoredItem } from './types.js';
 const GEMINI_API_VERSION = 'v1beta';
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com';
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
-const SCORE_REQUEST_TIMEOUT_MS = 30_000;
 
 export const DEFAULT_AI_PROVIDER: AiProvider = 'google';
 export const DEFAULT_AI_SCORE_BATCH_SIZE = 20;
+export const DEFAULT_AI_SCORE_TIMEOUT_MS = 30_000;
 export const MIN_SCORE = 1;
 export const MAX_SCORE = 100;
 
@@ -19,6 +19,7 @@ export interface ScoreConfig {
   model: string;
   apiKey: string;
   batchSize: number;
+  timeoutMs: number;
 }
 
 export interface ScoreEnv {
@@ -28,6 +29,7 @@ export interface ScoreEnv {
   OPENROUTER_API_KEY?: string;
   OPENROUTER_MODEL?: string;
   AI_SCORE_BATCH_SIZE?: string;
+  AI_SCORE_TIMEOUT_MS?: string;
 }
 
 interface ScoreResult {
@@ -63,10 +65,20 @@ function parseBatchSize(value: string | undefined): number {
   return batchSize;
 }
 
+function parseTimeoutMs(value: string | undefined): number {
+  if (value == null || value.trim() === '') return DEFAULT_AI_SCORE_TIMEOUT_MS;
+  const timeoutMs = Number(value);
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1) {
+    throw new Error('AI_SCORE_TIMEOUT_MS must be a positive integer');
+  }
+  return timeoutMs;
+}
+
 /** Read AI scoring configuration from environment variables. */
 export function getScoreConfig(env: ScoreEnv = {}): ScoreConfig {
   const provider = parseProvider(env.AI_PROVIDER);
   const batchSize = parseBatchSize(env.AI_SCORE_BATCH_SIZE);
+  const timeoutMs = parseTimeoutMs(env.AI_SCORE_TIMEOUT_MS);
 
   if (provider === 'openrouter') {
     return {
@@ -74,6 +86,7 @@ export function getScoreConfig(env: ScoreEnv = {}): ScoreConfig {
       apiKey: requireValue(env.OPENROUTER_API_KEY, 'OPENROUTER_API_KEY'),
       model: requireValue(env.OPENROUTER_MODEL, 'OPENROUTER_MODEL'),
       batchSize,
+      timeoutMs,
     };
   }
 
@@ -82,6 +95,7 @@ export function getScoreConfig(env: ScoreEnv = {}): ScoreConfig {
     apiKey: requireValue(env.GEMINI_API_KEY, 'GEMINI_API_KEY'),
     model: requireValue(env.GEMINI_MODEL, 'GEMINI_MODEL'),
     batchSize,
+    timeoutMs,
   };
 }
 
@@ -120,7 +134,7 @@ async function requestGemini(
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
         }),
-        signal: AbortSignal.timeout(SCORE_REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(config.timeoutMs),
       },
     );
 
@@ -161,7 +175,7 @@ async function requestOpenRouter(
         model: config.model,
         messages: [{ role: 'user', content: prompt }],
       }),
-      signal: AbortSignal.timeout(SCORE_REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(config.timeoutMs),
     });
 
     if (!response.ok) {
