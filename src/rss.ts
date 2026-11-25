@@ -66,6 +66,15 @@ function stripHtml(value: string): string {
     .trim();
 }
 
+function cleanDescription(value: string): string {
+  return value
+    .replace(/\s*(?:\[\.\.\.]|\.\.\.|…)\s*$/g, '')
+    .replace(/\s*Read\s+(?:the\s+)?(?:Entire|Full|Complete|More|Rest(?:\s+of\s+the)?|Whole)\s+(?:Article|Story|Post)\s*\.?\s*$/i, '')
+    .replace(/\s*(?:\[\.\.\.]|\.\.\.|…)\s*$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function normalizeUrl(value: string): string {
   try {
     const url = new URL(value.trim());
@@ -135,9 +144,11 @@ function parseRssItems(doc: XmlNode): RssItem[] {
       {
         title,
         url,
-        description: truncateToSentence(
-          stripHtml(description),
-          MAX_DESCRIPTION_LENGTH,
+        description: cleanDescription(
+          truncateToSentence(
+            cleanDescription(stripHtml(description)),
+            MAX_DESCRIPTION_LENGTH,
+          ),
         ),
         publishedAt,
       },
@@ -177,7 +188,9 @@ function parseJsonFeed(content: string): RssItem[] {
       {
         title,
         url,
-        description: truncateToSentence(description, MAX_DESCRIPTION_LENGTH),
+        description: cleanDescription(
+          truncateToSentence(cleanDescription(description), MAX_DESCRIPTION_LENGTH),
+        ),
         publishedAt,
       },
     ];

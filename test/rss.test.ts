@@ -144,3 +144,19 @@ test('fetchRssItems limits items per feed', async (t) => {
   assert.equal(items.length, 1);
   assert.equal(items[0]?.title, 'RTX 5090 review');
 });
+
+test('parseRssFeed removes trailing read-more boilerplate from descriptions', () => {
+  const xml = `<?xml version="1.0"?>
+  <rss version="2.0"><channel>
+    <item>
+      <title>Story</title>
+      <link>https://example.com/story</link>
+      <description>Big launch happened. Read Entire Article</description>
+      <pubDate>${new Date().toUTCString()}</pubDate>
+    </item>
+  </channel></rss>`;
+
+  const items = parseRssFeed(xml);
+
+  assert.equal(items[0]?.description, 'Big launch happened.');
+});

@@ -72,6 +72,7 @@ export interface Env {
   OPENROUTER_MODEL?: string;
   AI_SCORE_BATCH_SIZE?: string;
   AI_SCORE_TIMEOUT_MS?: string;
+  MIN_SCORE_THRESHOLD?: string;
   TELEGRAM_ENABLED?: string | boolean;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;

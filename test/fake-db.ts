@@ -137,6 +137,12 @@ class FakeStatement implements DbStatement {
         this.database.writes += 1;
         return { meta: { changes } };
       }
+      if (sql.includes('where url = ?')) {
+        const url = String(this.args[0]);
+        const existed = this.database.rows.delete(url);
+        this.database.writes += 1;
+        return { meta: { changes: existed ? 1 : 0 } };
+      }
       throw new Error(`Unexpected SQL: ${this.sql}`);
     }
 

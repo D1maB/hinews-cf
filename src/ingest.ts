@@ -3,6 +3,7 @@ import { fetchRssItems, parseFeedItemLimit } from './rss.js';
 import { scoreItems } from './score.js';
 import {
   buildScheduledAt,
+  deleteItemsByUrls,
   getExistingUrls,
   getLastScheduledAt,
   listNewItems,
@@ -14,6 +15,17 @@ import type { Env, FeedConfig, NewItem } from './types.js';
 
 const SPONSORED_REGEX =
   /\b(pr|ad|ads|collab|sponsored|sponsor|deal|deals|promo|promotion|promotions|giveaway|affiliate|discount|sale)\b/i;
+
+const DEFAULT_MIN_SCORE_THRESHOLD = 70;
+
+function parseMinScoreThreshold(value: string | undefined): number {
+  if (value == null || value.trim() === '') return DEFAULT_MIN_SCORE_THRESHOLD;
+  const threshold = Number(value);
+  if (!Number.isInteger(threshold) || threshold < 0 || threshold > 100) {
+    throw new Error('MIN_SCORE_THRESHOLD must be an integer between 0 and 100');
+  }
+  return threshold;
+}
 
 export interface IngestResult {
   inserted: number;
@@ -87,12 +99,14 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
   logAppEnv(env);
   const sources = getFeeds(env);
   const feedItemLimit = parseFeedItemLimit(env.FEED_ITEM_LIMIT);
+  const minScoreThreshold = parseMinScoreThreshold(env.MIN_SCORE_THRESHOLD);
   console.log(
     env.LOCAL_FEEDS_URL?.trim()
       ? `Using local feeds: ${env.LOCAL_FEEDS_URL}`
       : 'Using online feeds',
   );
   console.log(`Feed item limit: ${feedItemLimit}`);
+  console.log(`Minimum score threshold: ${minScoreThreshold}`);
   const found = await fetchRssItems(sources, feedItemLimit);
   console.log(`Fetched ${found.length} feed item(s) total`);
 
@@ -115,7 +129,9 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
   });
 
   const existingUrls = await getExistingUrls(env.DB);
-  const newCandidates = candidates.filter((item) => !existingUrls.has(item.url));
+  const newCandidates = candidates.filter(
+    (item) => !existingUrls.has(item.url),
+  );
   console.log(
     `Skipped ${candidates.length - newCandidates.length} already-stored item(s)`,
   );
@@ -142,11 +158,21 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
         ? new Date(lastScheduledAt).getTime()
         : Date.now();
 
-      prepared = freshCandidates.map((item) => ({
-        ...item,
-        score: scores.get(item.url) ?? 0,
-        scheduledAt: buildScheduledAt(baseTime, freshCandidates.length),
-      }));
+      prepared = freshCandidates
+        .map((item) => ({
+          ...item,
+          score: scores.get(item.url) ?? 0,
+          scheduledAt: '',
+        }))
+        .filter((item) => item.score >= minScoreThreshold)
+        .map((item, _index, list) => ({
+          ...item,
+          scheduledAt: buildScheduledAt(baseTime, list.length),
+        }));
+
+      console.log(
+        `Skipped ${freshCandidates.length - prepared.length} item(s) below score threshold ${minScoreThreshold}`,
+      );
 
       inserted = await saveItems(env.DB, prepared);
       console.log(`Saved ${inserted} new item(s) to DB`);
@@ -164,10 +190,31 @@ export async function ingestNews(env: Env): Promise<IngestResult> {
       const baseTime = lastScheduledAt
         ? new Date(lastScheduledAt).getTime()
         : Date.now();
-      const updates = pendingNewItems.map((item) => ({
+      const scoredPending = pendingNewItems.map((item) => ({
         url: item.url,
         score: scores.get(item.url) ?? 0,
-        scheduledAt: buildScheduledAt(baseTime, pendingNewItems.length),
+      }));
+      const accepted = scoredPending.filter(
+        (item) => item.score >= minScoreThreshold,
+      );
+      const rejected = scoredPending.filter(
+        (item) => item.score < minScoreThreshold,
+      );
+
+      if (rejected.length > 0) {
+        await deleteItemsByUrls(
+          env.DB,
+          rejected.map((item) => item.url),
+        );
+        console.log(
+          `Removed ${rejected.length} pending item(s) below score threshold ${minScoreThreshold}`,
+        );
+      }
+
+      const updates = accepted.map((item, _index, list) => ({
+        url: item.url,
+        score: item.score,
+        scheduledAt: buildScheduledAt(baseTime, list.length),
       }));
       const scheduled = await scheduleScoredItems(env.DB, updates);
       console.log(`Scored and scheduled ${scheduled} pending item(s)`);

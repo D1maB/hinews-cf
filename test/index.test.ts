@@ -40,7 +40,7 @@ function mockRssFetch(t: TestContext, body = RSS_XML): void {
                 parts: [
                   {
                     text: JSON.stringify(
-                      urls.map((u) => ({ url: u, score: 1 })),
+                      urls.map((u) => ({ url: u, score: 80 })),
                     ),
                   },
                 ],

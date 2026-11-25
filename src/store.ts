@@ -32,6 +32,7 @@ const SET_META = `INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) D
 
 const SELECT_SCHEDULED_AT = `SELECT scheduled_at FROM items`;
 const DELETE_PUBLISHED = "DELETE FROM items WHERE status = 'published'";
+const DELETE_ITEM_BY_URL = 'DELETE FROM items WHERE url = ?';
 const MARK_ITEM_PUBLISHED =
   "UPDATE items SET status = 'published' WHERE url = ? AND status = 'scheduled'";
 
@@ -194,6 +195,21 @@ export function buildScheduledAt(baseTime: number, itemCount: number): string {
 export async function deletePublished(db: Database): Promise<number> {
   const result = await db.prepare(DELETE_PUBLISHED).run();
   return result.meta.changes ?? 0;
+}
+
+export async function deleteItemsByUrls(
+  db: Database,
+  urls: string[],
+): Promise<number> {
+  if (urls.length === 0) return 0;
+  const statements = urls.map((url) =>
+    db.prepare(DELETE_ITEM_BY_URL).bind(url),
+  );
+  const results = await db.batch(statements);
+  return results.reduce(
+    (total, result) => total + (result.meta.changes ?? 0),
+    0,
+  );
 }
 
 /** Sort stored items by scheduled publication time. */

@@ -39,7 +39,7 @@ function mockRssFetch(t: TestContext, body = RSS_XML, status = 200): void {
                 parts: [
                   {
                     text: JSON.stringify(
-                      urls.map((u) => ({ url: u, score: 1 })),
+                      urls.map((u) => ({ url: u, score: 80 })),
                     ),
                   },
                 ],
@@ -79,7 +79,7 @@ test('stores RSS feed items with AI-scored values', async (t) => {
   const row = db.rows.get('https://wccftech.com/reviews/rtx-5090');
   assert.equal(row?.feed_id, 'wccftech');
   assert.equal(row?.feed_name, 'Wccftech');
-  assert.equal(row?.score, 1);
+  assert.equal(row?.score, 80);
   assert.equal(row?.description, 'A deep dive into the new flagship GPU.');
   assert.equal(row?.status, 'scheduled');
 });
@@ -281,4 +281,53 @@ test('skips deals and promo items', async (t) => {
 
   assert.equal(inserted, 1);
   assert.equal(db.rows.size, 1);
+});
+
+test('skips items below MIN_SCORE_THRESHOLD', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  t.mock.method(globalThis, 'fetch', async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes('generativelanguage.googleapis.com')) {
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify([
+                      {
+                        url: 'https://wccftech.com/reviews/rtx-5090',
+                        score: 90,
+                      },
+                      {
+                        url: 'https://www.techpowerup.com/review/ryzen-9950x',
+                        score: 40,
+                      },
+                    ]),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    }
+    return new Response(RSS_XML, { status: 200 });
+  });
+  const db = createFakeDb();
+
+  const { inserted } = await ingestNews({
+    DB: db,
+    AI_PROVIDER: 'google',
+    GEMINI_API_KEY: 'k',
+    GEMINI_MODEL: 'gemini-2.5-flash',
+    MIN_SCORE_THRESHOLD: '70',
+  });
+
+  assert.equal(inserted, 1);
+  assert.equal(db.rows.size, 1);
+  assert.ok(db.rows.has('https://wccftech.com/reviews/rtx-5090'));
+  assert.ok(!db.rows.has('https://www.techpowerup.com/review/ryzen-9950x'));
 });
