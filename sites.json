@@ -13,5 +13,25 @@
     "id": "techspot",
     "name": "TechSpot",
     "url": "https://www.techspot.com/backend.xml"
+  },
+  {
+    "id": "hothardware",
+    "name": "HotHardware",
+    "url": "https://hothardware.com/rss"
+  },
+  {
+    "id": "techradar-components",
+    "name": "TechRadar — components",
+    "url": "https://www.techradar.com/rss"
+  },
+  {
+    "id": "gamersnexus",
+    "name": "GamersNexus",
+    "url": "https://www.gamersnexus.net/rss.xml"
+  },
+  {
+    "id": "tweaktown",
+    "name": "TweakTown",
+    "url": "https://www.tweaktown.com/news-feed/"
   }
 ]

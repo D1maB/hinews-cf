@@ -86,7 +86,7 @@ test('renders every stored item from the database', async () => {
 
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type') ?? '', /^text\/html/);
-  assert.match(html, /7 stored headlines from 3 sources via RSS feeds/);
+  assert.match(html, /7 stored headlines from 9 sources via RSS feeds/);
 
   for (const row of rows) {
     assert.ok(html.includes(row.title), `missing ${row.title}`);
@@ -130,6 +130,14 @@ test('renders all stored items in a single list with source notes sorted by sche
   assert.match(items[1] ?? '', /KitGuru story/);
   assert.match(items[1] ?? '', /Source: KitGuru/);
   assert.match(items[1] ?? '', /Status: scheduled/);
+  assert.match(
+    html,
+    /Wccftech<\/span><span class="source-count">1 item<\/span>/,
+  );
+  assert.match(
+    html,
+    /TechPowerUp<\/span><span class="source-count">0 items<\/span>/,
+  );
 });
 
 test('renders an empty page when the database has no items yet', async () => {

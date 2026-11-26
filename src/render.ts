@@ -91,6 +91,18 @@ export function renderPage(
   items: StoredItem[] = [],
 ): string {
   const sourceLabel = 'RSS feeds';
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    counts.set(item.feed_id, (counts.get(item.feed_id) ?? 0) + 1);
+  }
+
+  const sourceStats = feeds
+    .map((feed) => {
+      const count = counts.get(feed.id) ?? 0;
+      return `<li class="source-stat"><span class="source-name">${escapeHtml(feed.name)}</span><span class="source-count">${count} item${count === 1 ? '' : 's'}</span></li>`;
+    })
+    .join('');
+
   const list =
     items.length > 0
       ? `<ul class="items">${items.map((item) => renderItem(item)).join('')}</ul>`
@@ -139,16 +151,20 @@ export function renderPage(
     h1 { margin: 0 0 0.25rem; font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
     .subtitle { margin: 0; color: var(--muted); font-size: 0.95rem; }
     .sync { margin: 0.5rem 0 0; color: var(--muted); font-size: 0.8rem; }
+    .source-stats { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+    .source-stat { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.65rem; border: 1px solid var(--border); border-radius: 999px; font-size: 0.8rem; }
+    .source-name { font-weight: 500; }
+    .source-count { color: var(--muted); }
     .list { display: flex; flex-direction: column; gap: 0.75rem; }
     ul { list-style: none; padding: 0; margin: 0; }
-    li {
+    .items li {
       padding: 0.6rem 0.75rem;
       border: 1px solid var(--border);
       border-radius: 0.5rem;
       margin-bottom: 0.75rem;
     }
-    li a { color: var(--text); text-decoration: none; font-weight: 500; }
-    li a:hover { color: var(--accent); }
+    .items li a { color: var(--text); text-decoration: none; font-weight: 500; }
+    .items li a:hover { color: var(--accent); }
     .meta { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; }
     .source { margin-top: 0.25rem; color: var(--muted); font-size: 0.75rem; }
     .status { margin-top: 0.25rem; color: var(--muted); font-size: 0.75rem; }
@@ -178,6 +194,7 @@ export function renderPage(
       <h1>News</h1>
       <p class="subtitle">${total} stored headline${total === 1 ? '' : 's'} from ${feeds.length} sources via ${sourceLabel}.</p>
       <p class="sync">Last sync: ${escapeHtml(formatSyncDate(lastSync) || 'never')}</p>
+      <ul class="source-stats">${sourceStats}</ul>
     </header>
     <main class="list">
       ${list}
