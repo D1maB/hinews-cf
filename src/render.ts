@@ -76,7 +76,7 @@ export function renderItem(item: StoredItem): string {
     : '';
 
   return `<li>
-  <a href="${escapeHtml(safeUrl(item.url))}">${escapeHtml(item.title)}</a>
+  <a href="${escapeHtml(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a>
   ${excerpt}
   <div class="meta">${score}${time}${scheduled}</div>
   ${source}
